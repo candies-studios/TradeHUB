@@ -1,0 +1,67 @@
+# Builds the backtest dashboard and saves it as index.html in this repository,
+# so GitHub Pages ("Deploy from a branch") shows it as the website.
+# Runs when the code changes, every weekday at 16:00 IST, or from Actions > Run workflow.
+name: Backtest dashboard
+
+on:
+  push:
+    branches: [main]
+    paths: ["**.py", "requirements.txt", ".github/workflows/dashboard.yml"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "RSI reading to test"
+        type: choice
+        options: [reversal, momentum]
+        default: reversal
+  schedule:
+    - cron: "30 10 * * 1-5"
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: dashboard
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+
+      - name: Run the backtest and build index.html
+        run: |
+          python backtest.py --mode "${{ inputs.mode || 'reversal' }}" --html index.html || python - <<'PY'
+          from datetime import datetime, timezone, timedelta
+          t = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%d %b %Y, %H:%M IST")
+          page = ("<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                  "<title>Nifty RSI Backtest</title><body style='font:16px/1.6 system-ui,sans-serif;max-width:640px;margin:60px auto;padding:0 16px'>"
+                  "<h1 style='font-size:24px'>Dashboard is being prepared</h1>"
+                  f"<p>Market data could not be downloaded on the last attempt ({t}). "
+                  "It retries automatically every weekday at 16:00 IST. To try now, open the repository's "
+                  "<b>Actions</b> tab, choose <b>Backtest dashboard</b> and click <b>Run workflow</b>.</p></body>")
+          open("index.html", "w", encoding="utf-8").write(page)
+          PY
+
+      - name: Save the page to the repository
+        run: |
+          touch .nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .nojekyll
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Update backtest dashboard"
+          git pull --rebase
+          git push
+
+      - name: Ask GitHub Pages to publish the new page
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
