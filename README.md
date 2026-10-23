@@ -24,29 +24,33 @@ GitHub runs the programs on its own computers:
 On github.com click **+ → New repository**. Give it a name (for example `nifty-rsi-alerts`) and choose **Public**. Free GitHub accounts can only publish a web page from a public repository. This is safe, because no secrets are stored in these files. Click **Create repository**.
 
 ### 2. Upload the files
-1. Unzip the folder on your Mac.
-2. Open it in Finder and press **Cmd + Shift + .** (full stop). This shows the hidden `.github` folder and `.gitignore` file. They must be uploaded too.
-3. On the new repository page, click **uploading an existing file**.
-4. Select **everything inside the folder**, including `.github`, and drag it in. Click **Commit changes**.
-5. Check that you can see a `.github` folder in the repository's file list.
+On the repository page, click **Add file → Upload files**. Drag in all the visible files, including the `github-setup` folder, and click **Commit changes**.
 
-> Never upload a file called `secrets.env`. The `.gitignore` file only protects you when you use git; the web uploader will upload whatever you drag in.
+> Never upload a file called `secrets.env`.
 
-### 3. Add your Telegram details as secrets
+### 3. Create the two automations (copy and paste)
+GitHub only runs automations stored in a folder called `.github/workflows`. Mac hides that folder, so create the files directly on github.com instead:
+
+1. Click **Add file → Create new file**.
+2. In the name box, type exactly `.github/workflows/dashboard.yml`. Each `/` you type creates a folder.
+3. On your Mac, open `github-setup/dashboard.yml` with TextEdit. Select all, copy, and paste it into the big box on GitHub.
+4. Click **Commit changes**.
+5. Repeat for `.github/workflows/alerts.yml` using `github-setup/alerts.yml`.
+
+### 4. Add your Telegram details as secrets
 Go to **Settings → Secrets and variables → Actions → New repository secret** and add two secrets:
 - Name `TELEGRAM_BOT_TOKEN`, with your bot token as the value.
 - Name `TELEGRAM_CHAT_ID`, with your chat ID as the value.
 
-GitHub keeps these hidden. They never appear in your files, and nobody viewing the repository can see them. (How to get them is under *Telegram setup* below.)
+GitHub keeps these hidden. They never appear in your files. (How to get them is under *Telegram setup* below.)
 
-### 4. Turn on the website
-Go to **Settings → Pages**. Under **Build and deployment → Source**, choose **GitHub Actions**.
+### 5. Check the website
+Saving `dashboard.yml` starts the first backtest automatically. Open the **Actions** tab and wait for the green tick (about 2 minutes). The automation saves an `index.html` into the repository, and your website then shows the dashboard instead of this README. Allow a minute or two for GitHub Pages to refresh.
 
-### 5. Run the backtest
-Open the **Actions** tab. If asked, click **I understand my workflows, go ahead and enable them**. Then:
-1. Click **Backtest dashboard** on the left.
-2. Click **Run workflow**, choose **reversal** or **momentum**, and click **Run workflow** again.
-3. After about 2 minutes, a green tick appears. Your dashboard is at `https://YOUR-USERNAME.github.io/YOUR-REPO/`.
+- **Website address:** `https://YOUR-USERNAME.github.io/YOUR-REPO/`
+- **Pages setting:** this uses the normal **Settings → Pages → Deploy from a branch → main / (root)** setting, which new repositories already have.
+- **Run it again any time:** go to **Actions → Backtest dashboard → Run workflow** and choose reversal or momentum.
+- **If the run fails with a permission error:** go to **Settings → Actions → General → Workflow permissions**, choose **Read and write permissions**, click **Save**, and run it again.
 
 ### 6. Alerts
 **RSI alerts** starts on its own every weekday from 09:15 to 15:30 IST. To pause it, go to **Actions → RSI alerts → ⋯ → Disable workflow**. To test it immediately, click **Run workflow**.
@@ -89,6 +93,7 @@ Click `config.py` in the repository, click the **pencil icon**, change a number 
 | `secrets.env.example` | Template for your Telegram details |
 | `.gitignore` | Stops secrets and generated files being committed with git |
 | `.github/workflows/` | The two GitHub automations (dashboard and alerts) |
+| `github-setup/` | Visible copies of the two automations, to copy and paste on github.com |
 | `*.command` | Double-click launchers for Mac |
 
 ## Things to know
