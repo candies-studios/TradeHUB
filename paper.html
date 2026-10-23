@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Trading Log</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#111827;--ink2:#4b5563;--line:#e3e6eb;--up:#0f8a4a;--down:#c62828;--accent:#1d4ed8;--soft:#eef3ff;--field:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#171c23;--ink:#eef1f5;--ink2:#a6afbc;--line:#2a313b;--up:#34c77b;--down:#ef5350;--accent:#6ea8ff;--soft:#1b2433;--field:#11161c;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:20px max(16px,3vw) 56px}
+nav{display:flex;gap:6px;margin-bottom:18px}
+nav a{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--ink2);font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--card)}
+nav a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+h1{font-size:clamp(22px,3vw,30px);margin:0}
+h2{font-size:17px;margin:0 0 4px}
+.muted{color:var(--ink2)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.tile span{font-size:13px;color:var(--ink2)}
+.tile strong{display:block;font-size:26px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tile small{color:var(--ink2);font-size:12.5px}
+.up{color:var(--up)}.down{color:var(--down)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.card > p{margin:0 0 12px;font-size:14px}
+.pending{display:grid;gap:10px}
+.alert{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:14px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--soft)}
+.alert b{font-size:15px}
+.alert .meta{font-size:13px;color:var(--ink2)}
+.inputs{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--ink2);gap:3px}
+input,select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);width:110px}
+select{width:130px}
+input[type=datetime-local]{width:190px}
+button{font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.link{background:none;border:0;color:var(--down);padding:4px 6px;font-weight:500}
+.hint{font-size:12.5px;color:var(--ink2);flex-basis:100%}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;color:var(--ink2);font-weight:600}
+.num{text-align:right}
+.side{font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px}
+.side.CE{background:color-mix(in srgb,var(--up) 15%,transparent);color:var(--up)}
+.side.PE{background:color-mix(in srgb,var(--down) 15%,transparent);color:var(--down)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.note{font-size:13px;color:var(--ink2);border-left:3px solid var(--accent);padding:6px 0 6px 12px;margin-top:8px}
+.empty{color:var(--ink2);font-size:14px;padding:6px 0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:720px){.tiles{grid-template-columns:1fr 1fr}.alert{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a href="./">Backtest</a><a href="paper.html" class="on">Paper log</a></nav>
+  <h1>Paper trading log</h1>
+  <p class="muted" style="margin:6px 0 0">Record each alert with the prices you saw in Sahi, without risking money, and see how the strategy really performs.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <h2>Alerts waiting for your prices</h2>
+    <p class="muted">New alerts from the bot appear here automatically. Enter the option price when the alert came (entry) and where it would have closed (exit).</p>
+    <div class="pending" id="pending"></div>
+  </section>
+
+  <section class="card">
+    <div class="row"><h2>Your paper trades</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="ghost" id="exportBtn" type="button">Download backup (CSV)</button>
+        <button class="ghost" id="importBtn" type="button">Restore backup</button>
+        <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+      </div></div>
+    <div class="tw" style="margin-top:10px"><table>
+      <thead><tr><th>Alert</th><th>Side</th><th class="num">Strike</th><th class="num">Qty</th><th class="num">Entry ₹</th><th class="num">Exit ₹</th><th>Result</th><th class="num">P&amp;L</th><th></th></tr></thead>
+      <tbody id="log"></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Add a trade by hand</h2>
+    <p class="muted">For alerts you noted elsewhere, or when the bot's list hasn't updated yet.</p>
+    <form class="inputs" id="manual">
+      <label for="m-time">Alert time<input type="datetime-local" id="m-time" required></label>
+      <label for="m-side">Side<select id="m-side"><option value="CE">CE (call)</option><option value="PE">PE (put)</option></select></label>
+      <label for="m-strike">Strike<input type="number" id="m-strike" step="50" required placeholder="24450"></label>
+      <label for="m-lots">Lots<input type="number" id="m-lots" min="1" value="3" required></label>
+      <label for="m-entry">Entry ₹<input type="number" id="m-entry" step="0.05" min="0" required></label>
+      <label for="m-exit">Exit ₹<input type="number" id="m-exit" step="0.05" min="0" required></label>
+      <label for="m-result">Result<select id="m-result"><option>Target</option><option>Stop-loss</option><option>15:15 exit</option><option>Manual exit</option></select></label>
+      <button type="submit">Add trade</button>
+    </form>
+  </section>
+
+  <p class="note">Your entries are saved in this browser only, so a different phone or computer won't see them. Use <b>Download backup</b> now and then, and <b>Restore backup</b> to move them to another device. P&amp;L includes about ₹80 per trade for brokerage and charges. This log is for practice and is not financial advice.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const LOT = 65, COST = 80, KEY = "tradehub-paper-v1";
+  const $ = s => document.querySelector(s);
+  const rs = v => (v < 0 ? "−" : "") + "₹" + Math.abs(Math.round(v)).toLocaleString("en-IN");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmtTime = t => { const d = new Date(t.replace(" ", "T")); return isNaN(d) ? t : d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }); };
+
+  let state = { trades: [], skipped: [] };
+  try { const raw = localStorage.getItem(KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  let alerts = [];
+
+  function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/); if (lines.length < 2) return [];
+    const head = lines[0].split(",").map(h => h.trim());
+    return lines.slice(1).filter(Boolean).map(l => { const v = l.split(","); const o = {}; head.forEach((h, i) => o[h] = (v[i] || "").trim()); return o; });
+  }
+
+  function pnl(t) { return (t.exit - t.entry) * t.qty - COST; }
+
+  function renderTiles() {
+    const t = state.trades, n = t.length, wins = t.filter(x => pnl(x) > 0).length, total = t.reduce((a, x) => a + pnl(x), 0);
+    const avg = n ? total / n : 0;
+    const tiles = [
+      ["Paper trades", String(n), alerts.length ? alerts.length + " alerts so far" : "no alerts yet", ""],
+      ["Win rate", n ? Math.round(wins / n * 100) + "%" : "–", wins + " winners", ""],
+      ["Net P&L", rs(total), "after ~₹80/trade costs", total > 0 ? "up" : total < 0 ? "down" : ""],
+      ["Average per trade", n ? rs(avg) : "–", "net of costs", avg > 0 ? "up" : avg < 0 ? "down" : ""],
+    ];
+    $("#tiles").innerHTML = tiles.map(k => `<div class="tile"><span>${k[0]}</span><strong class="${k[3]}">${k[1]}</strong><small>${k[2]}</small></div>`).join("");
+  }
+
+  function renderPending() {
+    const done = new Set(state.trades.map(t => t.alert_time).concat(state.skipped));
+    const open = alerts.filter(a => !done.has(a.alert_time)).reverse();
+    if (!open.length) { $("#pending").innerHTML = `<p class="empty">${alerts.length ? "All caught up. New alerts will appear here." : "No alerts yet. They appear here after the bot sends its first one during market hours."}</p>`; return; }
+    $("#pending").innerHTML = open.map(a => {
+      const id = a.alert_time.replace(/\W/g, "");
+      return `<div class="alert" data-t="${esc(a.alert_time)}">
+        <div><b>BUY NIFTY ${esc(a.strike)} <span class="side ${esc(a.side)}">${esc(a.side)}</span></b>
+          <div class="meta">${fmtTime(a.alert_time)} · expiry ${esc(a.expiry)} · ${esc(a.lots)} lots (${esc(a.qty)}) · Nifty ${esc(a.nifty)} · RSI ${esc(a.rsi)}</div></div>
+        <div class="inputs">
+          <label for="e${id}">Entry ₹<input type="number" step="0.05" min="0" id="e${id}" class="pe"></label>
+          <label for="x${id}">Exit ₹<input type="number" step="0.05" min="0" id="x${id}" class="px"></label>
+          <label for="r${id}">Result<select id="r${id}" class="pr"><option>Target</option><option>Stop-loss</option><option>15:15 exit</option><option>Manual exit</option></select></label>
+          <button type="button" class="ps">Save</button><button type="button" class="ghost pk">Skip</button>
+          <span class="hint" data-sl="${esc(a.sl_pts || 20)}" data-tg="${esc(a.target_pts || 40)}">Type the entry price to see your stop-loss and target.</span>
+        </div></div>`;
+    }).join("");
+  }
+
+  function renderLog() {
+    const rows = state.trades.slice().sort((a, b) => b.alert_time.localeCompare(a.alert_time));
+    $("#log").innerHTML = rows.length ? rows.map(t => {
+      const p = pnl(t);
+      return `<tr><td>${fmtTime(t.alert_time)}</td><td><span class="side ${esc(t.side)}">${esc(t.side)}</span></td><td class="num">${esc(t.strike)}</td>
+        <td class="num">${t.qty}</td><td class="num">${t.entry.toFixed(2)}</td><td class="num">${t.exit.toFixed(2)}</td><td>${esc(t.result)}</td>
+        <td class="num ${p >= 0 ? "up" : "down"}">${rs(p)}</td><td><button class="link" data-del="${esc(t.alert_time)}" type="button">Remove</button></td></tr>`;
+    }).join("") : `<tr><td colspan="9" class="empty">No paper trades recorded yet.</td></tr>`;
+  }
+
+  const render = () => { renderTiles(); renderPending(); renderLog(); };
+
+  // pending alerts: live SL/target helper, save, skip
+  $("#pending").addEventListener("input", e => {
+    if (!e.target.classList.contains("pe")) return;
+    const box = e.target.closest(".alert"), hint = box.querySelector(".hint"), v = parseFloat(e.target.value);
+    hint.textContent = isNaN(v) ? "Type the entry price to see your stop-loss and target."
+      : `Stop-loss ₹${(v - +hint.dataset.sl).toFixed(2)} · Target ₹${(v + +hint.dataset.tg).toFixed(2)}`;
+  });
+  $("#pending").addEventListener("click", e => {
+    const box = e.target.closest(".alert"); if (!box) return;
+    const a = alerts.find(x => x.alert_time === box.dataset.t);
+    if (e.target.classList.contains("pk")) { state.skipped.push(a.alert_time); save(); render(); return; }
+    if (!e.target.classList.contains("ps")) return;
+    const entry = parseFloat(box.querySelector(".pe").value), exit = parseFloat(box.querySelector(".px").value);
+    if (isNaN(entry) || isNaN(exit)) { box.querySelector(".hint").textContent = "Enter both the entry and exit price, then press Save."; return; }
+    state.trades.push({ alert_time: a.alert_time, side: a.side, strike: a.strike, qty: +a.qty || (+a.lots || 3) * LOT, entry, exit, result: box.querySelector(".pr").value });
+    save(); render();
+  });
+
+  // manual entry
+  $("#manual").addEventListener("submit", e => {
+    e.preventDefault();
+    const t = $("#m-time").value.replace("T", " ");
+    state.trades.push({ alert_time: t, side: $("#m-side").value, strike: $("#m-strike").value, qty: (+$("#m-lots").value || 3) * LOT,
+      entry: parseFloat($("#m-entry").value), exit: parseFloat($("#m-exit").value), result: $("#m-result").value });
+    save(); render(); e.target.reset(); $("#m-lots").value = 3;
+  });
+
+  $("#log").addEventListener("click", e => {
+    const t = e.target.dataset.del; if (!t) return;
+    state.trades = state.trades.filter(x => x.alert_time !== t); save(); render();
+  });
+
+  // backup / restore
+  $("#exportBtn").addEventListener("click", () => {
+    const cols = ["alert_time", "side", "strike", "qty", "entry", "exit", "result"];
+    const csv = [cols.join(",")].concat(state.trades.map(t => cols.map(c => t[c]).join(","))).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "paper-trades-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  $("#importBtn").addEventListener("click", () => $("#importFile").click());
+  $("#importFile").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    f.text().then(txt => {
+      const have = new Set(state.trades.map(t => t.alert_time));
+      parseCSV(txt).forEach(r => { if (!r.alert_time || have.has(r.alert_time)) return;
+        state.trades.push({ alert_time: r.alert_time, side: r.side, strike: r.strike, qty: +r.qty, entry: +r.entry, exit: +r.exit, result: r.result }); });
+      save(); render(); e.target.value = "";
+    });
+  });
+
+  render();
+  fetch("alerts_log.csv", { cache: "no-store" }).then(r => r.ok ? r.text() : "").then(txt => { alerts = txt ? parseCSV(txt) : []; render(); }).catch(() => render());
+})();
+</script>
+</body>
+</html>

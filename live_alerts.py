@@ -69,6 +69,7 @@ class Scanner:
         self.trades_today = 0
         self.pos = None          # estimated open position after an alert
         self.squared_off = False
+        self.on_alert = None     # optional callback(dict) for every new trade alert
 
     def _new_day(self, d):
         self.day, self.trades_today, self.pos, self.squared_off = d, 0, None, False
@@ -144,6 +145,12 @@ class Scanner:
         )
         self.trades_today += 1
         self.pos = {"side": side, "strike": strike, "nifty": spot, "delta": strategy.delta_for(d)}
+        if self.on_alert:
+            self.on_alert({
+                "alert_time": f"{close_time:%Y-%m-%d %H:%M}", "side": side, "strike": strike,
+                "expiry": f"{expiry:%Y-%m-%d}", "nifty": round(float(spot), 2), "rsi": round(float(bar.rsi), 1),
+                "lots": config.LOTS, "qty": qty, "sl_pts": config.STOP_LOSS_POINTS, "target_pts": config.TARGET_POINTS,
+            })
 
 
 # ---------------- main loops ----------------
@@ -181,6 +188,23 @@ def replay(path: str):
         sc.process(df.iloc[:k])
 
 
+ALERT_LOG = "alerts_log.csv"
+ALERT_COLS = ["alert_time", "side", "strike", "expiry", "nifty", "rsi", "lots", "qty", "sl_pts", "target_pts"]
+
+
+def log_alert(row: dict, path: str = ALERT_LOG):
+    """Append one alert to alerts_log.csv. The Paper log page on the website reads this file."""
+    import csv
+    from pathlib import Path
+
+    new_file = not Path(path).exists()
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ALERT_COLS)
+        if new_file:
+            w.writeheader()
+        w.writerow({k: row.get(k, "") for k in ALERT_COLS})
+
+
 def once(csv: str = None, state_file: str = ".alert_state.json"):
     """One check, then exit. Used by the scheduled GitHub run every 5 minutes.
     A small state file remembers what was already alerted so nothing is sent twice."""
@@ -208,6 +232,7 @@ def once(csv: str = None, state_file: str = ".alert_state.json"):
     seen = pd.Timestamp(state["last"]) if state.get("last") else None
     floor = last - timedelta(minutes=20)
     sc.last_seen = max(seen, floor) if seen is not None and seen > floor else floor
+    sc.on_alert = log_alert
     sc.process(df)
     st_path.write_text(json.dumps({"last": str(last), "day": str(last.date()), "count": sc.trades_today}))
     print(f"Checked up to the {last:%d %b %H:%M} candle. Alerts today: {sc.trades_today}.")

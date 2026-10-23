@@ -104,9 +104,12 @@ h1{{font-size:clamp(22px,3vw,30px);margin:0}}.muted{{color:var(--ink2)}}
 th,td{{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}}th{{font-size:12px;color:var(--ink2);font-weight:600}}
 .num{{text-align:right}}.side{{font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px}}
 .side.CE{{background:color-mix(in srgb,var(--up) 15%,transparent);color:var(--up)}}.side.PE{{background:color-mix(in srgb,var(--down) 15%,transparent);color:var(--down)}}
+.nav{{display:flex;gap:6px;margin-bottom:18px}}.nav a{{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--ink2);font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--card)}}
+.nav a.on{{background:var(--ink);color:var(--bg);border-color:var(--ink)}}
 .note{{font-size:13px;color:var(--ink2);border-left:3px solid var(--accent);padding:6px 0 6px 12px}}
 @media (max-width:720px){{.tiles{{grid-template-columns:1fr 1fr}}}}
 </style></head><body><div class="wrap">
+<nav class="nav"><a href="./" class="on">Backtest</a><a href="paper.html">Paper log</a></nav>
 <div class="head"><div><h1>Nifty RSI-{config.RSI_PERIOD} option buying — backtest</h1>
 <div class="chips"><span class="chip">{config.STRATEGY_MODE} mode · CE &gt; {lv['call']} / PE &lt; {lv['put']}</span>
 <span class="chip">{config.TIMEFRAME} candles</span><span class="chip">{config.LOTS} lots × {config.LOT_SIZE}</span>

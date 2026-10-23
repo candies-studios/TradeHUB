@@ -60,6 +60,9 @@ Saving `dashboard.yml` starts the first backtest automatically. Open the **Actio
 - Free usage: unlimited for public repositories. A private repository gets 2,000 minutes a month, and the alerts use roughly 1,600 of them.
 - Market data comes from Yahoo Finance, which can occasionally refuse requests from GitHub's servers. A failed check simply tries again 5 minutes later.
 
+### 7. Paper log
+Your website has a second page, **Paper log** (`…/paper.html`, or click **Paper log** at the top of the dashboard). Each alert the bot sends is saved to `alerts_log.csv` and appears there automatically. Type the option price you saw in Sahi when the alert came (entry), and where it would have closed (exit). The page tracks your win rate and net P&L. Entries are saved in the browser you use, so download a backup now and then.
+
 ### Changing settings on GitHub
 Click `config.py` in the repository, click the **pencil icon**, change a number (for example `LOTS = 4`), and click **Commit changes**. The next run uses the new value.
 
@@ -88,6 +91,7 @@ Click `config.py` in the repository, click the **pencil icon**, change a number 
 | `strategy.py` | RSI, signals, strike and expiry logic |
 | `backtest.py` | Tests the strategy on past data |
 | `report.py` | Builds the dashboard web page |
+| `paper.html` | Paper log page for recording alerts with real Sahi prices |
 | `live_alerts.py` | Watches the market and alerts you |
 | `requirements.txt` | Python packages the programs need |
 | `secrets.env.example` | Template for your Telegram details |
