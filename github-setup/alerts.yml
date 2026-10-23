@@ -1,14 +1,15 @@
-# Checks Nifty's RSI-14 every 5 minutes during market hours and sends a Telegram alert
-# when your rule fires. Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under
-# Settings > Secrets and variables > Actions. Turn it off from the Actions tab any time.
+# Checks RSI-14 every 5 minutes for every instrument in config.py and sends a Telegram alert
+# when your rule fires: NSE/BSE indices 09:15-15:30 IST, MCX commodities 09:00-23:30 IST.
+# Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under Settings > Secrets and variables > Actions.
+# Turn it off from the Actions tab any time.
 name: RSI alerts
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45,50,55 3 * * 1-5"   # 09:15-09:25 IST
-    - cron: "*/5 4-9 * * 1-5"      # 09:30-15:25 IST
-    - cron: "0 10 * * 1-5"         # 15:30 IST
+    - cron: "30-55/5 3 * * 1-5"    # 09:00-09:25 IST
+    - cron: "*/5 4-17 * * 1-5"     # 09:30-23:25 IST
+    - cron: "0 18 * * 1-5"         # 23:30 IST
 
 permissions:
   contents: write
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
