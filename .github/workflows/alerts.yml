@@ -1,0 +1,43 @@
+# Checks Nifty's RSI-14 every 5 minutes during market hours and sends a Telegram alert
+# when your rule fires. Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under
+# Settings > Secrets and variables > Actions. Turn it off from the Actions tab any time.
+name: RSI alerts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45,50,55 3 * * 1-5"   # 09:15-09:25 IST
+    - cron: "*/5 4-9 * * 1-5"      # 09:30-15:25 IST
+    - cron: "0 10 * * 1-5"         # 15:30 IST
+
+concurrency:
+  group: rsi-alerts
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Remember what was already alerted
+        uses: actions/cache/restore@v4
+        with:
+          path: .alert_state.json
+          key: alert-state-${{ github.run_id }}
+          restore-keys: alert-state-
+      - name: Check for a signal
+        run: python live_alerts.py --once
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .alert_state.json
+          key: alert-state-${{ github.run_id }}
