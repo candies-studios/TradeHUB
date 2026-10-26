@@ -1,5 +1,5 @@
 """
-Live RSI-14 alerts for every enabled instrument in config.py
+Live alerts for every enabled strategy (RSI-14, EMA 9/20) and instrument in config.py
 (Nifty, Sensex, Bank Nifty, Gold Mini, Silver Mini, Crude Oil, Natural Gas).
 You place the orders yourself on Sahi.
 
@@ -20,7 +20,7 @@ import data
 import strategy
 
 ALERT_LOG = "alerts_log.csv"
-ALERT_COLS = ["alert_time", "instrument", "name", "side", "strike", "expiry", "underlying", "rsi",
+ALERT_COLS = ["alert_time", "instrument", "name", "strategy", "side", "strike", "expiry", "underlying", "rsi",
               "lots", "qty", "sl_pts", "target_pts"]
 
 
@@ -54,6 +54,7 @@ def log_alert(row: dict, path: str = ALERT_LOG):
                 for r in old:
                     r.setdefault("instrument", "NIFTY"); r.setdefault("name", "Nifty 50")
                     r.setdefault("underlying", r.get("nifty", ""))
+                    r["strategy"] = r.get("strategy") or "RSI"
                     w.writerow({k: r.get(k, "") for k in ALERT_COLS})
     new_file = not p.exists()
     with open(p, "a", newline="", encoding="utf-8") as f:
@@ -85,8 +86,11 @@ def fetch_closed(key: str, inst: dict, csv_dir: str = None) -> pd.DataFrame:
 
 # ---------------- scanner (one per instrument) ----------------
 class Scanner:
-    def __init__(self, key: str, inst: dict, telegram: bool = True, fx: pd.Series = None):
-        self.key, self.inst, self.telegram, self.fx = key, inst, telegram, fx
+    """Watches one instrument for one strategy. Each has its own open position and daily limit."""
+
+    def __init__(self, key: str, inst: dict, strat: str = "RSI", telegram: bool = True, fx: pd.Series = None):
+        self.key, self.inst, self.strat, self.telegram, self.fx = key, inst, strat, telegram, fx
+        self.tag = f"[{config.STRATEGY_NAMES.get(strat, strat)}]"
         self.last_seen = None
         self.day = None
         self.trades_today = 0
@@ -100,7 +104,7 @@ class Scanner:
     def process(self, df: pd.DataFrame):
         if df.empty:
             return
-        df = strategy.add_signals(df)
+        df = strategy.add_signals(df, self.strat)
         new = df.tail(1) if self.last_seen is None else df[df.index > self.last_seen]
         for ts, bar in new.iterrows():
             if strategy.in_session(ts, self.inst):
@@ -122,14 +126,14 @@ class Scanner:
             best = sign * ((bar.high if p["side"] == "CE" else bar.low) - p["spot"]) * p["k"]
             msg = "likely hit your STOP-LOSS" if worst <= -p["sl"] else "likely hit your TARGET" if best >= p["tg"] else None
             if msg:
-                send(f"ℹ️ {name} {p['label']} has {msg} (estimated). Check your Sahi order book.", self.telegram)
+                send(f"ℹ️ {self.tag} {name} {p['label']} has {msg} (estimated). Check your Sahi order book.", self.telegram)
                 self.pos = None
 
         # 2) square-off reminder
         if close_time.time() >= strategy.t(inst["square_off"]) and not self.squared_off:
             self.squared_off = True
             if self.pos:
-                send(f"⏰ {inst['square_off']} — EXIT {name} {self.pos['label']} now if it is still open.", self.telegram)
+                send(f"⏰ {self.tag} {inst['square_off']} — EXIT {name} {self.pos['label']} now if it is still open.", self.telegram)
                 self.pos = None
             return
 
@@ -147,9 +151,13 @@ class Scanner:
         if sl <= 0:
             return
         kind = "CALL" if side == "CE" else "PUT"
-        lv = strategy.levels()["call" if side == "CE" else "put"]
-        why = (f"Why: RSI-{config.RSI_PERIOD} crossed {'above' if side == 'CE' else 'below'} {lv} "
-               f"(now {bar.rsi:.1f}) on the {ts:%H:%M} candle.")
+        if self.strat == "EMA":
+            why = (f"Why: {config.EMA_FAST} EMA crossed {'above' if side == 'CE' else 'below'} the {config.EMA_SLOW} EMA "
+                   f"on the {ts:%H:%M} candle ({_price(bar.ema_fast)} vs {_price(bar.ema_slow)}).")
+        else:
+            lv = strategy.levels()["call" if side == "CE" else "put"]
+            why = (f"Why: RSI-{config.RSI_PERIOD} crossed {'above' if side == 'CE' else 'below'} {lv} "
+                   f"(now {bar.rsi:.1f}) on the {ts:%H:%M} candle.")
         lots = inst["lots"]
         strike = strategy.pick_strike(spot, side, d, inst)
         expiry = strategy.expiry_for(d, inst)
@@ -157,13 +165,13 @@ class Scanner:
         if inst["segment"] == "index":
             on_exp = expiry == d and config.ATM_ON_EXPIRY_DAY
             label = f"{strike} {side}"
-            text = (f"🔔 BUY {self.key} {strike} {side} ({kind}) — {name}, {inst['exchange']}\n"
+            text = (f"🔔 {self.tag} BUY {self.key} {strike} {side} ({kind}) — {name}, {inst['exchange']}\n"
                     f"Expiry: {expiry:%a %d %b %Y}  |  {'ATM (expiry day)' if on_exp else f'{config.ITM_STRIKES} strike ITM'}\n"
                     f"Qty: {lots} lot{'s' if lots > 1 else ''} × {inst['units_per_lot']} = {lots * inst['units_per_lot']}\n"
                     f"{why} {name} at {_price(spot)}\n")
         else:
             label = f"{side} option"
-            text = (f"🔔 BUY {name.upper()} {side} ({kind}) — MCX\n"
+            text = (f"🔔 {self.tag} BUY {name.upper()} {side} ({kind}) — MCX\n"
                     f"Strike: {config.ITM_STRIKES} strike in-the-money in Sahi's {self.key} option chain, nearest expiry\n"
                     f"Qty: {lots} lot{'s' if lots > 1 else ''}\n"
                     f"{why} International price {_price(spot)} ({inst['ticker']})\n")
@@ -175,6 +183,7 @@ class Scanner:
         self.pos = {"side": side, "spot": spot, "k": delta * qf, "sl": sl, "tg": tg, "label": label}
         if self.on_alert:
             self.on_alert({"alert_time": f"{close_time:%Y-%m-%d %H:%M}", "instrument": self.key, "name": name,
+                           "strategy": self.strat,
                            "side": side, "strike": strike if strike is not None else "",
                            "expiry": f"{expiry:%Y-%m-%d}" if expiry else "nearest",
                            "underlying": round(spot, 2), "rsi": round(float(bar.rsi), 1), "lots": lots,
@@ -210,18 +219,21 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json"):
         if df.empty:
             print(f"{inst['name']}: no candles yet.")
             continue
-        st = state.get(key, {})
         last = df.index[-1]
-        sc = Scanner(key, inst, fx=fx)
-        if st.get("day") == str(last.date()):
-            sc.day, sc.trades_today = last.date(), int(st.get("count", 0))
-        seen = pd.Timestamp(st["last"]) if st.get("last") else None
-        floor = last - timedelta(minutes=20)
-        sc.last_seen = seen if seen is not None and seen > floor else floor
-        sc.on_alert = log_alert
-        sc.process(df)
-        state[key] = {"last": str(last), "day": str(last.date()), "count": sc.trades_today}
-        print(f"{inst['name']}: checked up to the {last:%d %b %H:%M} candle. Alerts today: {sc.trades_today}.")
+        for strat in config.enabled_strategies():
+            sk = f"{key}:{strat}"
+            st = state.get(sk) or (state.get(key, {}) if strat == "RSI" else {})   # older state used plain keys
+            sc = Scanner(key, inst, strat, fx=fx)
+            if st.get("day") == str(last.date()):
+                sc.day, sc.trades_today = last.date(), int(st.get("count", 0))
+            seen = pd.Timestamp(st["last"]) if st.get("last") else None
+            floor = last - timedelta(minutes=20)
+            sc.last_seen = seen if seen is not None and seen > floor else floor
+            sc.on_alert = log_alert
+            sc.process(df)
+            state[sk] = {"last": str(last), "day": str(last.date()), "count": sc.trades_today}
+            state.pop(key, None)
+            print(f"{inst['name']} {sc.tag}: checked up to the {last:%d %b %H:%M} candle. Alerts today: {sc.trades_today}.")
     st_path.write_text(json.dumps(state))
 
 
@@ -233,17 +245,22 @@ def seconds_to_next_check(now: datetime) -> float:
 
 def live():
     fx = data.usdinr_series()
-    scanners = {k: Scanner(k, v, fx=fx) for k, v in config.enabled_instruments().items()}
+    scanners = {(k, s_): Scanner(k, v, s_, fx=fx) for k, v in config.enabled_instruments().items()
+                for s_ in config.enabled_strategies()}
     for sc in scanners.values():
         sc.on_alert = log_alert
-    names = ", ".join(sc.inst["name"] for sc in scanners.values())
-    send(f"RSI-{config.RSI_PERIOD} alerts started ({config.STRATEGY_MODE} mode) for: {names}.")
+    names = ", ".join(v["name"] for v in config.enabled_instruments().values())
+    strats = " and ".join(config.STRATEGY_NAMES[s_] for s_ in config.enabled_strategies())
+    send(f"Alerts started ({strats}) for: {names}.")
     while True:
         now = now_ist()
-        for key, sc in scanners.items():
+        cache = {}
+        for (key, _), sc in scanners.items():
             if _open_now(sc.inst, now):
                 try:
-                    sc.process(fetch_closed(key, sc.inst))
+                    if key not in cache:                      # download once, share between strategies
+                        cache[key] = fetch_closed(key, sc.inst)
+                    sc.process(cache[key])
                 except Exception as e:
                     print(f"[{now:%H:%M}] {sc.inst['name']}: data error, will retry ({e})")
         pytime.sleep(seconds_to_next_check(datetime.now()))

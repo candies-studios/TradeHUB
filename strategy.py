@@ -33,16 +33,26 @@ def levels():
     return config.REVERSAL_LEVELS if config.STRATEGY_MODE == "reversal" else config.MOMENTUM_LEVELS
 
 
-def add_signals(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds 'rsi', 'atr' and 'signal' ('CE', 'PE' or None, decided at candle CLOSE)."""
+def add_signals(df: pd.DataFrame, strat: str = "RSI") -> pd.DataFrame:
+    """Adds rsi, atr, ema_fast, ema_slow and 'signal' ('CE', 'PE' or None, decided at candle CLOSE)
+    for one strategy: "RSI" (RSI-14 crosses your levels) or "EMA" (9 EMA crosses the 20 EMA)."""
     df = df.copy()
     df["rsi"] = wilder_rsi(df["close"])
     df["atr"] = atr(df)
-    prev = df["rsi"].shift(1)
-    lv = levels()
+    df["ema_fast"] = df["close"].ewm(span=config.EMA_FAST, adjust=False).mean()
+    df["ema_slow"] = df["close"].ewm(span=config.EMA_SLOW, adjust=False).mean()
     df["signal"] = None
-    df.loc[(prev <= lv["call"]) & (df["rsi"] > lv["call"]), "signal"] = "CE"
-    df.loc[(prev >= lv["put"]) & (df["rsi"] < lv["put"]), "signal"] = "PE"
+    if strat == "EMA":
+        gap = df["ema_fast"] - df["ema_slow"]
+        prev = gap.shift(1)
+        df.loc[(prev <= 0) & (gap > 0), "signal"] = "CE"
+        df.loc[(prev >= 0) & (gap < 0), "signal"] = "PE"
+        df.iloc[: config.EMA_SLOW * 3, df.columns.get_loc("signal")] = None   # let the EMAs settle first
+    else:
+        prev = df["rsi"].shift(1)
+        lv = levels()
+        df.loc[(prev <= lv["call"]) & (df["rsi"] > lv["call"]), "signal"] = "CE"
+        df.loc[(prev >= lv["put"]) & (df["rsi"] < lv["put"]), "signal"] = "PE"
     return df
 
 

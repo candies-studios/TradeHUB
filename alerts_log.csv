@@ -1,2 +1,1 @@
-alert_time,instrument,name,side,strike,expiry,underlying,rsi,lots,qty,sl_pts,target_pts
-2026-10-26 09:40,CRUDEOIL,Crude Oil,CE,,nearest,100.99,34.9,1,100,12.0,24.0
+alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,sl_pts,target_pts

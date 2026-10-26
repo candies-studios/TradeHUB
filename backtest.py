@@ -1,9 +1,10 @@
 """
-Backtest the RSI-14 option-buying strategy on every enabled instrument in config.py.
+Backtest every enabled strategy (RSI-14 and EMA 9/20) on every enabled instrument in config.py.
 
 Usage:
     python backtest.py                          # all instruments, last ~60 days of 5-min data (Yahoo Finance)
     python backtest.py --only NIFTY,GOLDM       # just some instruments
+    python backtest.py --strategy EMA           # just one strategy
     python backtest.py --mode momentum          # try the other RSI reading
     python backtest.py --html report.html       # also build the dashboard web page
     python backtest.py --csv-dir data/          # use your own candles: data/NIFTY.csv, data/GOLDM.csv ...
@@ -22,10 +23,10 @@ import data
 import strategy
 
 
-def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series) -> pd.DataFrame:
+def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series, strat: str = "RSI") -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
-    df = strategy.add_signals(df)
+    df = strategy.add_signals(df, strat)
     df = df[[strategy.in_session(ts, inst) for ts in df.index]]
     rows = list(df.itertuples())
     units = inst["units_per_lot"] * inst["lots"]
@@ -71,7 +72,7 @@ def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series) -> pd.DataFrame:
         pnl = exit_pts * units - inst["cost_rs"]
         exp = strategy.expiry_for(d, inst)
         trades.append({
-            "instrument": key, "date": d, "signal_candle": bar.Index, "entry_time": nxt.Index, "side": side,
+            "instrument": key, "strategy": strat, "date": d, "signal_candle": bar.Index, "entry_time": nxt.Index, "side": side,
             "strike": strategy.pick_strike(entry, side, d, inst), "expiry": exp,
             "expiry_day": exp == d, "rsi_at_signal": round(bar.rsi, 1), "underlying_entry": round(entry, 2),
             "sl_points": sl, "target_points": tg, "exit_time": exit_time, "exit_reason": reason,
@@ -83,17 +84,19 @@ def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series) -> pd.DataFrame:
     return pd.DataFrame(trades)
 
 
-def summary_line(key: str, inst: dict, t: pd.DataFrame, df: pd.DataFrame) -> str:
+def summary_line(label: str, t: pd.DataFrame, df: pd.DataFrame) -> str:
     if df.empty:
-        return f"{inst['name']:<13} no data downloaded"
+        return f"{label:<24} no data downloaded"
     if t.empty:
-        return f"{inst['name']:<13} {0:>4} trades"
+        return f"{label:<24} {0:>4} trades"
     eq = t.pnl_rs.cumsum()
-    return (f"{inst['name']:<13} {len(t):>4} trades  win {(t.pnl_rs > 0).mean():>4.0%}  "
+    return (f"{label:<24} {len(t):>4} trades  win {(t.pnl_rs > 0).mean():>4.0%}  "
             f"P&L Rs {t.pnl_rs.sum():>10,.0f}  max DD Rs {(eq - eq.cummax()).min():>10,.0f}")
 
 
-def run_all(only=None, csv_dir=None):
+def run_all(only=None, csv_dir=None, strategies=None):
+    """results[KEY] = {"inst", "data", "trades"}; trades has a 'strategy' column (RSI / EMA)."""
+    strategies = strategies or config.enabled_strategies()
     fx = data.usdinr_series(csv_dir)
     results = {}
     for key, inst in config.enabled_instruments().items():
@@ -104,13 +107,17 @@ def run_all(only=None, csv_dir=None):
         except Exception as e:
             print(f"{inst['name']}: data download failed ({e})")
             df = pd.DataFrame(columns=["open", "high", "low", "close"])
-        results[key] = {"inst": inst, "data": df, "trades": run(df, key, inst, fx)}
+        parts = [run(df, key, inst, fx, s) for s in strategies]
+        parts = [p for p in parts if not p.empty]
+        results[key] = {"inst": inst, "data": df, "strategies": strategies,
+                        "trades": pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()}
     return results
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--only", help="comma-separated instrument keys, e.g. NIFTY,SENSEX,GOLDM")
+    p.add_argument("--strategy", choices=["RSI", "EMA"], help="test only one strategy")
     p.add_argument("--mode", choices=["reversal", "momentum"], help="override STRATEGY_MODE")
     p.add_argument("--html", help="also write the dashboard web page to this path, e.g. report.html")
     p.add_argument("--csv-dir", help="folder with <KEY>.csv candle files instead of downloading")
@@ -118,18 +125,21 @@ if __name__ == "__main__":
     if a.mode:
         config.STRATEGY_MODE = a.mode
     only = [s.strip().upper() for s in a.only.split(",")] if a.only else None
-    res = run_all(only, a.csv_dir)
+    res = run_all(only, a.csv_dir, [a.strategy] if a.strategy else None)
 
     print("\n" + "=" * 78)
-    print(f"RSI-{config.RSI_PERIOD} option buying | {config.STRATEGY_MODE} mode | 5-min candles")
+    print(f"Option buying | RSI-{config.RSI_PERIOD} ({config.STRATEGY_MODE}) and EMA {config.EMA_FAST}/{config.EMA_SLOW} | 5-min candles")
     print("=" * 78)
     for key, r in res.items():
-        print(summary_line(key, r["inst"], r["trades"], r["data"]))
+        for s_ in r["strategies"]:
+            t = r["trades"][r["trades"].strategy == s_] if not r["trades"].empty else r["trades"]
+            print(summary_line(f"{r['inst']['name']} · {config.STRATEGY_NAMES[s_]}", t, r["data"]))
     allt = [r["trades"] for r in res.values() if not r["trades"].empty]
     if allt:
         allt = pd.concat(allt, ignore_index=True)
         print("-" * 78)
-        print(f"{'All':<13} {len(allt):>4} trades  win {(allt.pnl_rs > 0).mean():>4.0%}  P&L Rs {allt.pnl_rs.sum():>10,.0f}")
+        for s_, g in allt.groupby("strategy"):
+            print(summary_line(f"All · {config.STRATEGY_NAMES[s_]}", g, pd.DataFrame({"x": [1]})))
         allt.to_csv("backtest_trades.csv", index=False)
         print("Saved trade list: backtest_trades.csv")
     print("\nPremiums are estimated with delta and ignore time decay, so treat this as optimistic.")

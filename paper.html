@@ -38,13 +38,19 @@ button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
 button.link{background:none;border:0;color:var(--down);padding:4px 6px;font-weight:500}
 .hint{font-size:12.5px;color:var(--ink2);flex-basis:100%}
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:720px;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;min-width:800px;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}
 th{font-size:12px;color:var(--ink2);font-weight:600}
 .num{text-align:right}
 .side{font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px}
 .side.CE{background:color-mix(in srgb,var(--up) 15%,transparent);color:var(--up)}
 .side.PE{background:color-mix(in srgb,var(--down) 15%,transparent);color:var(--down)}
+.tag{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.tag.RSI{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.tag.EMA{background:color-mix(in srgb,#c2410c 15%,transparent);color:#c2410c}
+@media (prefers-color-scheme:dark){.tag.EMA{color:#fb923c}}
+.bystrat{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13.5px;color:var(--ink2);margin:-4px 0 16px}
+.bystrat b{color:var(--ink)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .note{font-size:13px;color:var(--ink2);border-left:3px solid var(--accent);padding:6px 0 6px 12px;margin-top:8px}
 .empty{color:var(--ink2);font-size:14px;padding:6px 0}
@@ -59,6 +65,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
   <p class="muted" style="margin:6px 0 0">Record each alert with the prices you saw in Sahi, without risking money, and see how the strategy really performs.</p>
 
   <div class="tiles" id="tiles"></div>
+  <div class="bystrat" id="bystrat"></div>
 
   <section class="card">
     <h2>Alerts waiting for your prices</h2>
@@ -74,7 +81,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
         <input type="file" id="importFile" accept=".csv,text/csv" hidden>
       </div></div>
     <div class="tw" style="margin-top:10px"><table>
-      <thead><tr><th>Alert</th><th>Instrument</th><th>Side</th><th class="num">Strike</th><th class="num">Qty</th><th class="num">Entry ₹</th><th class="num">Exit ₹</th><th>Result</th><th class="num">P&amp;L</th><th></th></tr></thead>
+      <thead><tr><th>Alert</th><th>Strategy</th><th>Instrument</th><th>Side</th><th class="num">Strike</th><th class="num">Qty</th><th class="num">Entry ₹</th><th class="num">Exit ₹</th><th>Result</th><th class="num">P&amp;L</th><th></th></tr></thead>
       <tbody id="log"></tbody></table></div>
   </section>
 
@@ -83,6 +90,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     <p class="muted">For alerts you noted elsewhere, or when the bot's list hasn't updated yet.</p>
     <form class="inputs" id="manual">
       <label for="m-time">Alert time<input type="datetime-local" id="m-time" required></label>
+      <label for="m-strat">Strategy<select id="m-strat"><option value="RSI">RSI-14</option><option value="EMA">EMA 9/20</option></select></label>
       <label for="m-inst">Instrument<select id="m-inst"></select></label>
       <label for="m-side">Side<select id="m-side"><option value="CE">CE (call)</option><option value="PE">PE (put)</option></select></label>
       <label for="m-strike">Strike<input type="number" id="m-strike" step="any" placeholder="optional"></label>
@@ -108,6 +116,10 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     SILVERM: { name: "Silver Mini", units: 5, cost: 100 }, CRUDEOIL: { name: "Crude Oil", units: 100, cost: 100 },
     NATURALGAS: { name: "Natural Gas", units: 1250, cost: 100 } };
   const instOf = k => INST[k] || INST.NIFTY;
+  const STRAT = { RSI: "RSI-14", EMA: "EMA 9/20" };
+  const stratOf = k => STRAT[k] ? k : "RSI";
+  const idOf = x => [x.alert_time, x.instrument || "NIFTY", stratOf(x.strategy), x.side].join("|");
+  const tag = k => `<span class="tag ${stratOf(k)}">${STRAT[stratOf(k)]}</span>`;
   const $ = s => document.querySelector(s);
   const rs = v => (v < 0 ? "−" : "") + "₹" + Math.abs(Math.round(v)).toLocaleString("en-IN");
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -135,17 +147,21 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
       ["Net P&L", rs(total), "after estimated costs", total > 0 ? "up" : total < 0 ? "down" : ""],
       ["Average per trade", n ? rs(avg) : "–", "net of costs", avg > 0 ? "up" : avg < 0 ? "down" : ""],
     ];
+    $("#bystrat").innerHTML = Object.keys(STRAT).map(k => {
+      const g = t.filter(x => stratOf(x.strategy) === k), w = g.filter(x => pnl(x) > 0).length, tot = g.reduce((a, x) => a + pnl(x), 0);
+      return `<span>${tag(k)} <b>${g.length}</b> trades · win ${g.length ? Math.round(w / g.length * 100) + "%" : "–"} · net <b class="${tot > 0 ? "up" : tot < 0 ? "down" : ""}">${rs(tot)}</b></span>`;
+    }).join("");
     $("#tiles").innerHTML = tiles.map(k => `<div class="tile"><span>${k[0]}</span><strong class="${k[3]}">${k[1]}</strong><small>${k[2]}</small></div>`).join("");
   }
 
   function renderPending() {
-    const done = new Set(state.trades.map(t => t.alert_time).concat(state.skipped));
-    const open = alerts.filter(a => !done.has(a.alert_time)).reverse();
+    const done = new Set(state.trades.map(idOf).concat(state.skipped));
+    const open = alerts.filter(a => !done.has(idOf(a)) && !done.has(a.alert_time)).reverse();
     if (!open.length) { $("#pending").innerHTML = `<p class="empty">${alerts.length ? "All caught up. New alerts will appear here." : "No alerts yet. They appear here after the bot sends its first one during market hours."}</p>`; return; }
     $("#pending").innerHTML = open.map(a => {
-      const id = a.alert_time.replace(/\W/g, "");
-      return `<div class="alert" data-t="${esc(a.alert_time)}">
-        <div><b>${esc(a.name || "Nifty 50")} ${a.strike ? esc(a.strike) + " " : ""}<span class="side ${esc(a.side)}">${esc(a.side)}</span></b>
+      const id = idOf(a).replace(/\W/g, "");
+      return `<div class="alert" data-t="${esc(idOf(a))}">
+        <div>${tag(a.strategy)} <b>${esc(a.name || "Nifty 50")} ${a.strike ? esc(a.strike) + " " : ""}<span class="side ${esc(a.side)}">${esc(a.side)}</span></b>
           <div class="meta">${fmtTime(a.alert_time)} · ${a.strike ? "expiry " + esc(a.expiry) : "pick a 1-strike ITM option, nearest expiry"} · ${esc(a.lots)} lot${+a.lots > 1 ? "s" : ""} · price ${esc(a.underlying || a.nifty || "")} · RSI ${esc(a.rsi)}</div></div>
         <div class="inputs">
           <label for="e${id}">Entry ₹<input type="number" step="0.05" min="0" id="e${id}" class="pe"></label>
@@ -161,10 +177,10 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     const rows = state.trades.slice().sort((a, b) => b.alert_time.localeCompare(a.alert_time));
     $("#log").innerHTML = rows.length ? rows.map(t => {
       const p = pnl(t);
-      return `<tr><td>${fmtTime(t.alert_time)}</td><td>${esc(instOf(t.instrument).name)}</td><td><span class="side ${esc(t.side)}">${esc(t.side)}</span></td><td class="num">${esc(t.strike) || "–"}</td>
+      return `<tr><td>${fmtTime(t.alert_time)}</td><td>${tag(t.strategy)}</td><td>${esc(instOf(t.instrument).name)}</td><td><span class="side ${esc(t.side)}">${esc(t.side)}</span></td><td class="num">${esc(t.strike) || "–"}</td>
         <td class="num">${t.qty}</td><td class="num">${t.entry.toFixed(2)}</td><td class="num">${t.exit.toFixed(2)}</td><td>${esc(t.result)}</td>
-        <td class="num ${p >= 0 ? "up" : "down"}">${rs(p)}</td><td><button class="link" data-del="${esc(t.alert_time)}" type="button">Remove</button></td></tr>`;
-    }).join("") : `<tr><td colspan="10" class="empty">No paper trades recorded yet.</td></tr>`;
+        <td class="num ${p >= 0 ? "up" : "down"}">${rs(p)}</td><td><button class="link" data-del="${esc(idOf(t))}" type="button">Remove</button></td></tr>`;
+    }).join("") : `<tr><td colspan="11" class="empty">No paper trades recorded yet.</td></tr>`;
   }
 
   const render = () => { renderTiles(); renderPending(); renderLog(); };
@@ -178,13 +194,13 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
   });
   $("#pending").addEventListener("click", e => {
     const box = e.target.closest(".alert"); if (!box) return;
-    const a = alerts.find(x => x.alert_time === box.dataset.t);
-    if (e.target.classList.contains("pk")) { state.skipped.push(a.alert_time); save(); render(); return; }
+    const a = alerts.find(x => idOf(x) === box.dataset.t);
+    if (e.target.classList.contains("pk")) { state.skipped.push(idOf(a)); save(); render(); return; }
     if (!e.target.classList.contains("ps")) return;
     const entry = parseFloat(box.querySelector(".pe").value), exit = parseFloat(box.querySelector(".px").value);
     if (isNaN(entry) || isNaN(exit)) { box.querySelector(".hint").textContent = "Enter both the entry and exit price, then press Save."; return; }
     const ik = a.instrument || "NIFTY";
-    state.trades.push({ alert_time: a.alert_time, instrument: ik, side: a.side, strike: a.strike || "", qty: +a.qty || (+a.lots || 1) * instOf(ik).units, entry, exit, result: box.querySelector(".pr").value });
+    state.trades.push({ alert_time: a.alert_time, instrument: ik, strategy: stratOf(a.strategy), side: a.side, strike: a.strike || "", qty: +a.qty || (+a.lots || 1) * instOf(ik).units, entry, exit, result: box.querySelector(".pr").value });
     save(); render();
   });
 
@@ -193,19 +209,19 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     e.preventDefault();
     const t = $("#m-time").value.replace("T", " ");
     const ik = $("#m-inst").value;
-    state.trades.push({ alert_time: t, instrument: ik, side: $("#m-side").value, strike: $("#m-strike").value, qty: (+$("#m-lots").value || 1) * instOf(ik).units,
+    state.trades.push({ alert_time: t, instrument: ik, strategy: $("#m-strat").value, side: $("#m-side").value, strike: $("#m-strike").value, qty: (+$("#m-lots").value || 1) * instOf(ik).units,
       entry: parseFloat($("#m-entry").value), exit: parseFloat($("#m-exit").value), result: $("#m-result").value });
     save(); render(); e.target.reset(); $("#m-lots").value = 1;
   });
 
   $("#log").addEventListener("click", e => {
     const t = e.target.dataset.del; if (!t) return;
-    state.trades = state.trades.filter(x => x.alert_time !== t); save(); render();
+    state.trades = state.trades.filter(x => idOf(x) !== t); save(); render();
   });
 
   // backup / restore
   $("#exportBtn").addEventListener("click", () => {
-    const cols = ["alert_time", "instrument", "side", "strike", "qty", "entry", "exit", "result"];
+    const cols = ["alert_time", "instrument", "strategy", "side", "strike", "qty", "entry", "exit", "result"];
     const csv = [cols.join(",")].concat(state.trades.map(t => cols.map(c => t[c]).join(","))).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -216,9 +232,9 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
   $("#importFile").addEventListener("change", e => {
     const f = e.target.files[0]; if (!f) return;
     f.text().then(txt => {
-      const have = new Set(state.trades.map(t => t.alert_time));
-      parseCSV(txt).forEach(r => { if (!r.alert_time || have.has(r.alert_time)) return;
-        state.trades.push({ alert_time: r.alert_time, instrument: r.instrument || "NIFTY", side: r.side, strike: r.strike, qty: +r.qty, entry: +r.entry, exit: +r.exit, result: r.result }); });
+      const have = new Set(state.trades.map(idOf));
+      parseCSV(txt).forEach(r => { if (!r.alert_time || have.has(idOf(r))) return;
+        state.trades.push({ alert_time: r.alert_time, instrument: r.instrument || "NIFTY", strategy: stratOf(r.strategy), side: r.side, strike: r.strike, qty: +r.qty, entry: +r.entry, exit: +r.exit, result: r.result }); });
       save(); render(); e.target.value = "";
     });
   });

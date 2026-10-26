@@ -1,6 +1,11 @@
-# RSI-14 Options — Backtest Dashboard + Alerts
+# RSI-14 + EMA 9/20 Options — Backtest Dashboard + Alerts
 
-A research tool for one strategy: buy options when RSI-14 on 5-minute candles crosses your levels. It **does not place orders**; you place trades yourself on Sahi.
+A research tool for two option-buying strategies on 5-minute candles. Each sends its own alerts and is tested separately:
+
+- **RSI-14** (tag `[RSI-14]`): buy CALL when RSI crosses back above 30, buy PUT when it crosses back below 70.
+- **EMA 9/20** (tag `[EMA 9/20]`): buy CALL when the 9 EMA crosses above the 20 EMA, buy PUT when it crosses below.
+
+Switch either off in `config.py` under `STRATEGIES`. Each strategy has its own open trade and its own daily limit (`MAX_TRADES_PER_DAY`) per instrument, so both can alert on the same instrument. It **does not place orders**; you place trades yourself on Sahi.
 
 | Instrument | Exchange | Lot | Expiry | Alerts between (IST) |
 |---|---|---|---|---|

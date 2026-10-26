@@ -4,6 +4,22 @@ Change the numbers here; you don't need to touch the other files.
 On GitHub: open this file, click the pencil icon, edit, then "Commit changes".
 """
 
+# ---------------- Strategies ----------------
+# Each strategy sends its own alerts (tagged [RSI-14] or [EMA 9/20]) and is tested separately.
+# Set one to False to switch it off.
+STRATEGIES = {
+    "RSI": True,    # RSI-14 crosses your levels (below)
+    "EMA": True,    # 9 EMA crosses the 20 EMA: above = buy CALL, below = buy PUT
+}
+STRATEGY_NAMES = {"RSI": "RSI-14", "EMA": "EMA 9/20"}
+EMA_FAST = 9
+EMA_SLOW = 20
+
+
+def enabled_strategies():
+    return [k for k, on in STRATEGIES.items() if on]
+
+
 # ---------------- RSI signal (same rule for every instrument) ----------------
 RSI_PERIOD = 14
 TIMEFRAME = "5m"          # 5-minute candles
@@ -23,8 +39,8 @@ ATM_ON_EXPIRY_DAY = True  # on an index's expiry day use the ATM strike instead
 DELTA_ITM = 0.60
 DELTA_ATM_EXPIRY = 0.50
 
-# ---------------- Risk limits (apply to EACH instrument separately) ----------------
-MAX_TRADES_PER_DAY = 3
+# ---------------- Risk limits (apply to EACH instrument and EACH strategy separately) ----------------
+MAX_TRADES_PER_DAY = 10
 DAILY_MAX_LOSS_RS = 10000
 
 # Stop-loss / target can be a fixed number of PREMIUM points, or "auto".
