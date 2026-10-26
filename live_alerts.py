@@ -97,6 +97,7 @@ class Scanner:
         self.pos = None
         self.squared_off = False
         self.on_alert = None
+        self.now = None          # set by once(): used to flag alerts that arrive late
 
     def _new_day(self, d):
         self.day, self.trades_today, self.pos, self.squared_off = d, 0, None, False
@@ -177,6 +178,10 @@ class Scanner:
                     f"{why} International price {_price(spot)} ({inst['ticker']})\n")
         text += (f"After you buy: SL = your price − {_pts(sl)}, Target = your price + {_pts(tg)}"
                  f"{' (approx.)' if inst['segment'] == 'commodity' else ''}. Exit by {inst['square_off']}.")
+        late = int((self.now - close_time).total_seconds() // 60) if self.now else 0
+        if late > 10:
+            text = (f"⏱️ LATE ALERT — this signal is {late} min old (GitHub's scheduler ran late). "
+                    f"Check the current price before entering, or skip it.\n" + text)
         send(text, self.telegram)
 
         self.trades_today += 1
@@ -197,8 +202,13 @@ def _open_now(inst, now: datetime) -> bool:
 
 
 # ---------------- one check (GitHub, every 5 minutes) ----------------
-def once(csv_dir: str = None, state_file: str = ".alert_state.json"):
-    """Check every instrument once, then exit. A small state file prevents duplicate alerts."""
+CATCH_UP_MINUTES = 120   # if GitHub runs late, still check every candle from the last 2 hours
+
+
+def once(csv_dir: str = None, state_file: str = ".alert_state.json", now: datetime = None):
+    """Check every instrument once, then exit. A small state file prevents duplicate alerts.
+    GitHub's scheduler often starts late, so this catches up on every candle since the last check
+    (up to CATCH_UP_MINUTES) and marks alerts older than 10 minutes as late."""
     st_path = Path(state_file)
     try:
         state = json.loads(st_path.read_text())
@@ -207,7 +217,8 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json"):
     if "last" in state:                       # state file from the Nifty-only version
         state = {"NIFTY": state}
     fx = data.usdinr_series(csv_dir)
-    now = now_ist()
+    check_lateness = now is not None or not csv_dir   # test runs on old CSVs skip the lateness check
+    now = now or now_ist()
     for key, inst in config.enabled_instruments().items():
         if not csv_dir and not _open_now(inst, now):
             continue
@@ -227,9 +238,10 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json"):
             if st.get("day") == str(last.date()):
                 sc.day, sc.trades_today = last.date(), int(st.get("count", 0))
             seen = pd.Timestamp(st["last"]) if st.get("last") else None
-            floor = last - timedelta(minutes=20)
+            floor = last - timedelta(minutes=CATCH_UP_MINUTES)
             sc.last_seen = seen if seen is not None and seen > floor else floor
             sc.on_alert = log_alert
+            sc.now = now if check_lateness else None
             sc.process(df)
             state[sk] = {"last": str(last), "day": str(last.date()), "count": sc.trades_today}
             state.pop(key, None)
@@ -270,5 +282,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--once", action="store_true", help="check once and exit (for scheduled runs)")
     p.add_argument("--csv-dir", help="with --once: read <KEY>.csv candle files from this folder (for testing)")
+    p.add_argument("--now", help="with --once: pretend the time is 'YYYY-MM-DD HH:MM' (for testing)")
     a = p.parse_args()
-    once(a.csv_dir) if a.once else live()
+    once(a.csv_dir, now=pd.Timestamp(a.now).to_pydatetime() if a.now else None) if a.once else live()
