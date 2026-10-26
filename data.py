@@ -46,6 +46,17 @@ def load(key: str, inst: dict, csv_dir: str = None, period: str = "60d") -> pd.D
     return load_yahoo(inst["ticker"], period=period)
 
 
+def india_vix(csv_dir: str = None) -> float:
+    """Latest India VIX (annual volatility in %), used to estimate index option prices."""
+    try:
+        if csv_dir:
+            raise RuntimeError("offline")
+        v = load_yahoo("^INDIAVIX", period="5d", interval="1d")["close"].dropna()
+        return float(v.iloc[-1]) if len(v) else config.INDIA_VIX_FALLBACK
+    except Exception:
+        return config.INDIA_VIX_FALLBACK
+
+
 def usdinr_series(csv_dir: str = None) -> pd.Series:
     """Daily USD/INR closes indexed by date (for converting commodity prices to rupees)."""
     try:
