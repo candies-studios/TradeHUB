@@ -54,6 +54,16 @@ NSE_HOLIDAYS = [
     # "2026-11-10",
 ]
 
+# ---------------- Estimated option price (indices only) ----------------
+# The bot has no live option prices, so for Nifty, Sensex and Bank Nifty it estimates the premium
+# with the Black-Scholes formula from the index level, days to expiry and India VIX, and turns your
+# stop-loss/target points into rupee prices. Always confirm the real price in Sahi.
+ESTIMATE_PREMIUM = True
+RISK_FREE_RATE = 0.065        # yearly, roughly the Indian T-bill rate
+INDIA_VIX_FALLBACK = 13.0     # used if India VIX can't be downloaded
+# Bank Nifty swings more than Nifty, so its volatility is India VIX x this factor.
+VIX_MULTIPLIER = {"NIFTY": 1.0, "SENSEX": 1.0, "BANKNIFTY": 1.25}
+
 # Used only for commodities: converts international prices (US$) to MCX rupee prices.
 # The live USD/INR rate is downloaded each run; this is the fallback if that fails.
 USDINR_FALLBACK = 88.0
