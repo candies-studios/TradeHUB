@@ -125,6 +125,37 @@ def pick_strike(spot: float, side: str, d: date, inst):
     return atm - shift if side == "CE" else atm + shift
 
 
+# ---------------- estimated option premium (indices) ----------------
+def _ncdf(x: float) -> float:
+    import math
+    return 0.5 * (1 + math.erf(x / math.sqrt(2)))
+
+
+def bs_premium(spot: float, strike: float, years: float, vol: float, side: str, rate: float = None) -> float:
+    """Black-Scholes price of a European index option (NSE/BSE index options are European)."""
+    import math
+    rate = config.RISK_FREE_RATE if rate is None else rate
+    years = max(years, 1 / (365 * 24))          # at least one hour left
+    vol = max(vol, 0.01)
+    d1 = (math.log(spot / strike) + (rate + vol * vol / 2) * years) / (vol * math.sqrt(years))
+    d2 = d1 - vol * math.sqrt(years)
+    disc = math.exp(-rate * years)
+    if side == "CE":
+        return spot * _ncdf(d1) - strike * disc * _ncdf(d2)
+    return strike * disc * _ncdf(-d2) - spot * _ncdf(-d1)
+
+
+def years_to_expiry(now, expiry_date, close_hhmm: str = "15:30") -> float:
+    from datetime import datetime
+    end = datetime.combine(expiry_date, t(close_hhmm))
+    return max((end - now).total_seconds(), 3600) / (365 * 24 * 3600)
+
+
+def tick(x: float) -> float:
+    """Round to the 0.05 tick that NSE/BSE option prices trade in."""
+    return round(round(x / 0.05) * 0.05, 2)
+
+
 # ---------------- price conversion (commodities) ----------------
 def quote_factor(inst, usdinr: float) -> float:
     """Multiply an underlying price move by this to get MCX rupee quote points."""
