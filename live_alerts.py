@@ -21,7 +21,7 @@ import strategy
 
 ALERT_LOG = "alerts_log.csv"
 ALERT_COLS = ["alert_time", "instrument", "name", "strategy", "side", "strike", "expiry", "underlying", "rsi",
-              "lots", "qty", "sl_pts", "target_pts"]
+              "lots", "qty", "sl_pts", "target_pts", "est_premium"]
 
 
 # ---------------- alert delivery ----------------
@@ -98,6 +98,7 @@ class Scanner:
         self.squared_off = False
         self.on_alert = None
         self.now = None          # set by once(): used to flag alerts that arrive late
+        self.vix = config.INDIA_VIX_FALLBACK   # India VIX, for the estimated option price
 
     def _new_day(self, d):
         self.day, self.trades_today, self.pos, self.squared_off = d, 0, None, False
@@ -152,36 +153,43 @@ class Scanner:
         if sl <= 0:
             return
         kind = "CALL" if side == "CE" else "PUT"
-        if self.strat == "EMA":
-            why = (f"Why: {config.EMA_FAST} EMA crossed {'above' if side == 'CE' else 'below'} the {config.EMA_SLOW} EMA "
-                   f"on the {ts:%H:%M} candle ({_price(bar.ema_fast)} vs {_price(bar.ema_slow)}).")
-        else:
-            lv = strategy.levels()["call" if side == "CE" else "put"]
-            why = (f"Why: RSI-{config.RSI_PERIOD} crossed {'above' if side == 'CE' else 'below'} {lv} "
-                   f"(now {bar.rsi:.1f}) on the {ts:%H:%M} candle.")
         lots = inst["lots"]
         strike = strategy.pick_strike(spot, side, d, inst)
         expiry = strategy.expiry_for(d, inst)
 
+        late = int((self.now - close_time).total_seconds() // 60) if self.now else 0
+        when = f"{close_time:%d %b %Y, %H:%M}" + (f"  (⏱️ {late} min late)" if late > 10 else "")
+        approx = " (approx.)" if inst["segment"] == "commodity" else ""
+        est = None
+        if inst["segment"] == "index" and config.ESTIMATE_PREMIUM:
+            vol = self.vix / 100 * config.VIX_MULTIPLIER.get(self.key, 1.0)
+            years = strategy.years_to_expiry(close_time.to_pydatetime() if hasattr(close_time, "to_pydatetime") else close_time,
+                                             expiry, inst["session"][1])
+            est = strategy.tick(strategy.bs_premium(spot, strike, years, vol, side))
+            if est < 0.5:
+                est = None
         if inst["segment"] == "index":
             on_exp = expiry == d and config.ATM_ON_EXPIRY_DAY
             label = f"{strike} {side}"
-            text = (f"🔔 {self.tag} BUY {self.key} {strike} {side} ({kind}) — {name}, {inst['exchange']}\n"
-                    f"Expiry: {expiry:%a %d %b %Y}  |  {'ATM (expiry day)' if on_exp else f'{config.ITM_STRIKES} strike ITM'}\n"
-                    f"Qty: {lots} lot{'s' if lots > 1 else ''} × {inst['units_per_lot']} = {lots * inst['units_per_lot']}\n"
-                    f"{why} {name} at {_price(spot)}\n")
+            which = f"{self.key} {expiry:%d %b} expiry, {lots} lot{'s' if lots > 1 else ''} ({config.STRATEGY_NAMES[self.strat]})"
+            strike_txt = f"{strike}" + (" (ATM, expiry day)" if on_exp else "")
         else:
             label = f"{side} option"
-            text = (f"🔔 {self.tag} BUY {name.upper()} {side} ({kind}) — MCX\n"
-                    f"Strike: {config.ITM_STRIKES} strike in-the-money in Sahi's {self.key} option chain, nearest expiry\n"
-                    f"Qty: {lots} lot{'s' if lots > 1 else ''}\n"
-                    f"{why} International price {_price(spot)} ({inst['ticker']})\n")
-        text += (f"After you buy: SL = your price − {_pts(sl)}, Target = your price + {_pts(tg)}"
-                 f"{' (approx.)' if inst['segment'] == 'commodity' else ''}. Exit by {inst['square_off']}.")
-        late = int((self.now - close_time).total_seconds() // 60) if self.now else 0
-        if late > 10:
-            text = (f"⏱️ LATE ALERT — this signal is {late} min old (GitHub's scheduler ran late). "
-                    f"Check the current price before entering, or skip it.\n" + text)
+            which = f"{self.key} nearest expiry, {lots} lot{'s' if lots > 1 else ''} ({config.STRATEGY_NAMES[self.strat]})"
+            strike_txt = f"{config.ITM_STRIKES} strike in-the-money in Sahi's option chain"
+        if est:
+            prices = (f"Buy price (approx.) - ₹{est:,.2f}  (estimate, confirm in Sahi)\n"
+                      f"Stop loss price - ₹{max(est - sl, 0.05):,.2f}  (your buy price − {_pts(sl)})\n"
+                      f"Target price - ₹{est + tg:,.2f}  (your buy price + {_pts(tg)})\n")
+        else:
+            prices = (f"Stop loss price - your buy price − {_pts(sl)}{approx}\n"
+                      f"Target price - your buy price + {_pts(tg)}{approx}\n")
+        text = (f"Instrument name - {name} ({inst['exchange']})\n"
+                f"Which option - {which}\n"
+                f"CE/PE - {side} ({kind})\n"
+                f"Strike price to buy - {strike_txt}\n"
+                + prices +
+                f"Time of the signal - {when}")
         send(text, self.telegram)
 
         self.trades_today += 1
@@ -192,7 +200,8 @@ class Scanner:
                            "side": side, "strike": strike if strike is not None else "",
                            "expiry": f"{expiry:%Y-%m-%d}" if expiry else "nearest",
                            "underlying": round(spot, 2), "rsi": round(float(bar.rsi), 1), "lots": lots,
-                           "qty": lots * inst["units_per_lot"], "sl_pts": sl, "target_pts": tg})
+                           "qty": lots * inst["units_per_lot"], "sl_pts": sl, "target_pts": tg,
+                           "est_premium": est if est else ""})
 
 
 def _open_now(inst, now: datetime) -> bool:
@@ -217,6 +226,7 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json", now: dateti
     if "last" in state:                       # state file from the Nifty-only version
         state = {"NIFTY": state}
     fx = data.usdinr_series(csv_dir)
+    vix = data.india_vix(csv_dir)
     check_lateness = now is not None or not csv_dir   # test runs on old CSVs skip the lateness check
     now = now or now_ist()
     for key, inst in config.enabled_instruments().items():
@@ -242,6 +252,7 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json", now: dateti
             sc.last_seen = seen if seen is not None and seen > floor else floor
             sc.on_alert = log_alert
             sc.now = now if check_lateness else None
+            sc.vix = vix
             sc.process(df)
             state[sk] = {"last": str(last), "day": str(last.date()), "count": sc.trades_today}
             state.pop(key, None)
@@ -267,7 +278,9 @@ def live():
     while True:
         now = now_ist()
         cache = {}
+        vix = data.india_vix()
         for (key, _), sc in scanners.items():
+            sc.vix = vix
             if _open_now(sc.inst, now):
                 try:
                     if key not in cache:                      # download once, share between strategies
