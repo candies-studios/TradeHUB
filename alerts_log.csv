@@ -16,3 +16,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-27 16:55,NATURALGAS,Natural Gas,RSI,CE,,nearest,3.01,33.0,1,1250,0.56,1.0,
 2026-10-27 17:30,NATURALGAS,Natural Gas,RSI,PE,,nearest,3.04,61.8,1,1250,0.83,1.5,
 2026-10-27 17:25,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.05,72.2,1,1250,0.75,1.5,
+2026-10-27 18:25,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.02,44.1,1,1250,1.5,3.0,
