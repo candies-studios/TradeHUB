@@ -253,11 +253,62 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json", now: dateti
             sc.on_alert = log_alert
             sc.now = now if check_lateness else None
             sc.vix = vix
-            sc.process(df)
+            try:
+                sc.process(df)
+            except Exception as e:           # one instrument's problem must never stop the others
+                import traceback
+                traceback.print_exc()
+                print(f"{inst['name']} {sc.tag}: ERROR, skipped this check ({e})")
+                continue
             state[sk] = {"last": str(last), "day": str(last.date()), "count": sc.trades_today}
             state.pop(key, None)
             print(f"{inst['name']} {sc.tag}: checked up to the {last:%d %b %H:%M} candle. Alerts today: {sc.trades_today}.")
     st_path.write_text(json.dumps(state))
+
+
+# ---------------- watch mode (GitHub: one long run instead of many short ones) ----------------
+def _save_log_to_github():
+    """Commit and push alerts_log.csv if new alerts were added (only inside GitHub Actions)."""
+    import os
+    import subprocess
+
+    if not os.environ.get("GITHUB_ACTIONS") or not Path(ALERT_LOG).exists():
+        return
+    run = lambda *c: subprocess.run(list(c), capture_output=True, text=True)
+    run("git", "add", ALERT_LOG)
+    if run("git", "diff", "--cached", "--quiet").returncode == 0:
+        return
+    run("git", "commit", "-m", "Log new trading alert")
+    for _ in range(3):
+        run("git", "pull", "--rebase")
+        if run("git", "push").returncode == 0:
+            return
+        pytime.sleep(5)
+    print("Could not save alerts_log.csv to GitHub this time; will retry after the next check.")
+
+
+def watch(minutes: int = 345, last_close: str = "23:35"):
+    """Check every 5 minutes, just after each candle closes, for up to `minutes` (or until last_close IST).
+    GitHub only has to START this run a few times a day, so its unreliable 5-minute scheduler no longer matters."""
+    start = now_ist()
+    end = min(start + timedelta(minutes=minutes), datetime.combine(start.date(), strategy.t(last_close)))
+    if start.weekday() >= 5 or start >= end:
+        print("Market closed (weekend or after hours). Nothing to watch.")
+        return
+    print(f"Watching every 5 minutes until {end:%H:%M} IST.")
+    while True:
+        try:
+            once()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"Check failed, will retry next candle ({e})")
+        _save_log_to_github()
+        wait = seconds_to_next_check(datetime.now())     # 20 s after the next 5-minute candle closes
+        if now_ist() + timedelta(seconds=wait) > end:
+            break
+        pytime.sleep(wait)
+    print("Watch period finished.")
 
 
 # ---------------- continuous mode (your Mac) ----------------
@@ -294,7 +345,13 @@ def live():
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--once", action="store_true", help="check once and exit (for scheduled runs)")
+    p.add_argument("--watch", type=int, metavar="MINUTES", help="check every 5 minutes for this many minutes (GitHub)")
     p.add_argument("--csv-dir", help="with --once: read <KEY>.csv candle files from this folder (for testing)")
     p.add_argument("--now", help="with --once: pretend the time is 'YYYY-MM-DD HH:MM' (for testing)")
     a = p.parse_args()
-    once(a.csv_dir, now=pd.Timestamp(a.now).to_pydatetime() if a.now else None) if a.once else live()
+    if a.watch:
+        watch(a.watch)
+    elif a.once:
+        once(a.csv_dir, now=pd.Timestamp(a.now).to_pydatetime() if a.now else None)
+    else:
+        live()
