@@ -51,7 +51,9 @@ AUTO_TARGET_MULT = 2.0
 
 # NSE trading holidays as "YYYY-MM-DD". If an expiry day is a holiday, expiry moves earlier.
 NSE_HOLIDAYS = [
-    # "2026-11-10",
+    "2026-11-10",   # Diwali Balipratipada (Tuesday)
+    "2026-11-24",   # Guru Nanak Jayanti (Tuesday)
+    "2026-12-25",   # Christmas (Friday)
 ]
 
 # ---------------- Estimated option price (indices only) ----------------
