@@ -1,15 +1,20 @@
-# Checks RSI-14 every 5 minutes for every instrument in config.py and sends a Telegram alert
-# when your rule fires: NSE/BSE indices 09:15-15:30 IST, MCX commodities 09:00-23:30 IST.
+# Watches every instrument in config.py and sends a Telegram alert when a strategy fires.
+# GitHub's 5-minute scheduler is unreliable, so instead each run stays on for up to ~6 hours
+# and checks every 5 minutes by itself. GitHub only needs to START a run a few times a day;
+# extra starts simply wait in line. NSE/BSE 09:15-15:30 IST, MCX 09:00-23:30 IST.
 # Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under Settings > Secrets and variables > Actions.
-# Turn it off from the Actions tab any time.
+# To start watching right now: Actions > RSI alerts > Run workflow.
 name: RSI alerts
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30-55/5 3 * * 1-5"    # 09:00-09:25 IST
-    - cron: "*/5 4-17 * * 1-5"     # 09:30-23:25 IST
-    - cron: "0 18 * * 1-5"         # 23:30 IST
+    - cron: "25 3 * * 1-5"    # 08:55 IST
+    - cron: "40 4 * * 1-5"    # 10:10 IST (backup start)
+    - cron: "25 6 * * 1-5"    # 11:55 IST
+    - cron: "25 9 * * 1-5"    # 14:55 IST
+    - cron: "25 12 * * 1-5"   # 17:55 IST
+    - cron: "25 15 * * 1-5"   # 20:55 IST
 
 permissions:
   contents: write
@@ -19,9 +24,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check:
+  watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,21 +40,15 @@ jobs:
           path: .alert_state.json
           key: alert-state-${{ github.run_id }}
           restore-keys: alert-state-
-      - name: Check for a signal
-        run: python live_alerts.py --once
+      - name: Set up saving alerts to the repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Watch the market (checks every 5 minutes)
+        run: python -u live_alerts.py --watch 345
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      - name: Save new alerts to alerts_log.csv (shown on the Paper log page)
-        run: |
-          test -f alerts_log.csv || exit 0
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add alerts_log.csv
-          if git diff --cached --quiet; then echo "No new alerts"; exit 0; fi
-          git commit -m "Log new RSI alert"
-          git pull --rebase
-          git push
       - uses: actions/cache/save@v4
         if: always()
         with:
