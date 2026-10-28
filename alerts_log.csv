@@ -40,3 +40,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-28 14:40,NIFTY,Nifty 50,EMA,PE,22750,2026-11-03,22675.1,45.0,3,195,20.0,40.0,215.7
 2026-10-28 14:35,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.06,50.7,1,1250,0.56,1.0,
 2026-10-28 14:40,CRUDEOIL,Crude Oil,EMA,CE,,nearest,101.88,58.1,1,100,23.0,46.0,
+2026-10-28 14:40,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.05,39.4,1,1250,0.61,1.0,
