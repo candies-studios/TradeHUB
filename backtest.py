@@ -40,7 +40,8 @@ def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series, strat: str = "RSI
         if d != cur_day:
             cur_day, day_count, day_pnl = d, 0, 0.0
         if not (bar.signal in ("CE", "PE") and nxt.Index.date() == d and strategy.in_entry_window(nxt.Index, inst)
-                and day_count < config.MAX_TRADES_PER_DAY and day_pnl > -config.DAILY_MAX_LOSS_RS):
+                and strategy.under_daily_limit(day_count)
+                and (config.DAILY_MAX_LOSS_RS is None or day_pnl > -config.DAILY_MAX_LOSS_RS)):
             i += 1
             continue
 

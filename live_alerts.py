@@ -143,7 +143,7 @@ class Scanner:
         side = bar.signal
         if side not in ("CE", "PE") or self.pos or not strategy.in_entry_window(close_time, inst):
             return
-        if self.trades_today >= config.MAX_TRADES_PER_DAY:
+        if not strategy.under_daily_limit(self.trades_today):
             return
 
         spot = float(bar.close)
@@ -287,28 +287,35 @@ def _save_log_to_github():
     print("Could not save alerts_log.csv to GitHub this time; will retry after the next check.")
 
 
-def watch(minutes: int = 345, last_close: str = "23:35"):
-    """Check every 5 minutes, just after each candle closes, for up to `minutes` (or until last_close IST).
-    GitHub only has to START this run a few times a day, so its unreliable 5-minute scheduler no longer matters."""
-    start = now_ist()
-    end = min(start + timedelta(minutes=minutes), datetime.combine(start.date(), strategy.t(last_close)))
-    if start.weekday() >= 5 or start >= end:
-        print("Market closed (weekend or after hours). Nothing to watch.")
-        return
-    print(f"Watching every 5 minutes until {end:%H:%M} IST.")
+def _any_market_open(now: datetime) -> bool:
+    return any(_open_now(inst, now) for inst in config.enabled_instruments().values())
+
+
+def watch(minutes: int = 345):
+    """Stay on for `minutes`, checking every 5 minutes (20 s after each candle closes) while any market is open.
+    The GitHub workflow starts the next run when this one ends, so the bot keeps itself running
+    around the clock and never depends on GitHub's unreliable scheduler. Outside market hours it just waits."""
+    end = now_ist() + timedelta(minutes=minutes)
+    print(f"Watching until {end:%d %b %H:%M} IST, then the next run takes over.")
+    last_note = None
     while True:
-        try:
-            once()
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"Check failed, will retry next candle ({e})")
-        _save_log_to_github()
+        now = now_ist()
+        if _any_market_open(now):
+            try:
+                once()
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"Check failed, will retry next candle ({e})")
+            _save_log_to_github()
+        elif last_note is None or (now - last_note) >= timedelta(hours=1):
+            print(f"[{now:%d %b %H:%M} IST] Markets closed, waiting.")
+            last_note = now
         wait = seconds_to_next_check(datetime.now())     # 20 s after the next 5-minute candle closes
         if now_ist() + timedelta(seconds=wait) > end:
             break
         pytime.sleep(wait)
-    print("Watch period finished.")
+    print("Watch period finished; the next run takes over now.")
 
 
 # ---------------- continuous mode (your Mac) ----------------

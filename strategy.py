@@ -56,6 +56,12 @@ def add_signals(df: pd.DataFrame, strat: str = "RSI") -> pd.DataFrame:
     return df
 
 
+def under_daily_limit(count: int) -> bool:
+    """True if another signal is allowed today (MAX_TRADES_PER_DAY = None means unlimited)."""
+    limit = config.MAX_TRADES_PER_DAY
+    return limit is None or count < limit
+
+
 def t(hhmm: str) -> time:
     h, m = hhmm.split(":")
     return time(int(h), int(m))

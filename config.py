@@ -40,8 +40,8 @@ DELTA_ITM = 0.60
 DELTA_ATM_EXPIRY = 0.50
 
 # ---------------- Risk limits (apply to EACH instrument and EACH strategy separately) ----------------
-MAX_TRADES_PER_DAY = 10
-DAILY_MAX_LOSS_RS = 10000
+MAX_TRADES_PER_DAY = None   # None = unlimited signals; or a number, e.g. 10
+DAILY_MAX_LOSS_RS = None    # backtest only: stop for the day after this loss; None = no limit
 
 # Stop-loss / target can be a fixed number of PREMIUM points, or "auto".
 # "auto" sizes them from recent volatility (ATR of the last 14 five-minute candles):

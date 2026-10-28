@@ -200,7 +200,7 @@ td a{{color:var(--accent);font-weight:600;text-decoration:none}}.num{{text-align
 <section class="card"><h2>Strategy comparison, all instruments</h2><div class="strats">{totals}</div>
 <div class="tw" style="margin-top:16px"><table><thead><tr><th>Instrument</th><th>Exchange</th>{head_cells}</tr></thead><tbody>{ov}</tbody></table></div></section>
 {sections}
-<p class="note">Each strategy is tested on its own: its own trades, daily limit of {config.MAX_TRADES_PER_DAY} per instrument, and the same stop-loss/target rules.
+<p class="note">Each strategy is tested on its own: its own trades, {"no daily limit on signals" if config.MAX_TRADES_PER_DAY is None else f"a daily limit of {config.MAX_TRADES_PER_DAY} per instrument"}, and the same stop-loss/target rules.
 Premiums are estimated from the underlying's move using delta and ignore time decay, so real results are usually worse.
 Commodity signals use international prices (COMEX/NYMEX) converted to rupees. For research only, not financial advice.</p>
 </div></body></html>"""
