@@ -1,23 +1,24 @@
-# Watches every instrument in config.py and sends a Telegram alert when a strategy fires.
-# GitHub's 5-minute scheduler is unreliable, so instead each run stays on for up to ~6 hours
-# and checks every 5 minutes by itself. GitHub only needs to START a run a few times a day;
-# extra starts simply wait in line. NSE/BSE 09:15-15:30 IST, MCX 09:00-23:30 IST.
+# Keeps the bot running around the clock: each run watches the market for about 6 hours
+# (checking every 5 minutes while NSE/BSE/MCX are open) and then starts the next run itself.
+# GitHub's own schedule below is only a backup that restarts the chain if it ever stops.
 # Needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under Settings > Secrets and variables > Actions.
-# To start watching right now: Actions > RSI alerts > Run workflow.
+# Start it now: Actions > RSI alerts > Run workflow.  Stop it: cancel the running run AND
+# Actions > RSI alerts > (...) > Disable workflow.
 name: RSI alerts
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "25 3 * * 1-5"    # 08:55 IST
-    - cron: "40 4 * * 1-5"    # 10:10 IST (backup start)
-    - cron: "25 6 * * 1-5"    # 11:55 IST
-    - cron: "25 9 * * 1-5"    # 14:55 IST
-    - cron: "25 12 * * 1-5"   # 17:55 IST
-    - cron: "25 15 * * 1-5"   # 20:55 IST
+    - cron: "15 3 * * 1-5"    # 08:45 IST backup start
+    - cron: "40 4 * * 1-5"    # 10:10 IST backup start
+    - cron: "25 6 * * 1-5"    # 11:55 IST backup start
+    - cron: "25 9 * * 1-5"    # 14:55 IST backup start
+    - cron: "25 12 * * 1-5"   # 17:55 IST backup start
+    - cron: "25 15 * * 1-5"   # 20:55 IST backup start
 
 permissions:
-  contents: write
+  contents: write     # save alerts_log.csv
+  actions: write      # start the next run
 
 concurrency:
   group: rsi-alerts
@@ -44,8 +45,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Start the next run (it waits in line until this one finishes)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Only queue a successor if nothing is already waiting, so the chain never doubles up.
+          waiting=$(gh run list --workflow alerts.yml --status queued --json databaseId --jq length 2>/dev/null || echo 0)
+          pending=$(gh run list --workflow alerts.yml --status pending --json databaseId --jq length 2>/dev/null || echo 0)
+          if [ "$((waiting + pending))" -eq 0 ]; then gh workflow run alerts.yml --ref "${{ github.ref_name }}"; echo "Next run queued."; else echo "A next run is already waiting."; fi
       - name: Watch the market (checks every 5 minutes)
-        run: python -u live_alerts.py --watch 345
+        run: python -u live_alerts.py --watch 340
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
