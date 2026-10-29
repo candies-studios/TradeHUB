@@ -49,3 +49,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-28 22:30,GOLDM,Gold Mini,EMA,CE,,nearest,4058.7,57.9,1,10,89.0,180.0,
 2026-10-28 22:45,CRUDEOIL,Crude Oil,EMA,PE,,nearest,102.89,48.8,1,100,26.0,52.0,
 2026-10-28 22:55,SILVERM,Silver Mini,EMA,PE,,nearest,53.65,44.4,1,5,225.0,450.0,
+2026-10-29 09:30,BANKNIFTY,Bank Nifty,EMA,CE,54300,2026-11-23,54352.7,63.3,1,30,60.0,120.0,1303.15
