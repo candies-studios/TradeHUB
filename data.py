@@ -16,7 +16,9 @@ def _clean(raw: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["open", "high", "low", "close"])
     if isinstance(raw.columns, pd.MultiIndex):
         raw.columns = raw.columns.get_level_values(0)
-    df = raw.rename(columns=str.lower)[["open", "high", "low", "close"]].dropna()
+    raw = raw.rename(columns=str.lower)
+    cols = ["open", "high", "low", "close"] + (["volume"] if "volume" in raw.columns else [])
+    df = raw[cols].dropna(subset=["open", "high", "low", "close"])
     idx = df.index
     df.index = idx.tz_convert(IST).tz_localize(None) if idx.tz is not None else idx
     return df.sort_index()
@@ -35,7 +37,8 @@ def load_csv(path: str) -> pd.DataFrame:
     df[tcol] = pd.to_datetime(df[tcol])
     if df[tcol].dt.tz is not None:
         df[tcol] = df[tcol].dt.tz_convert(IST).dt.tz_localize(None)
-    return df.set_index(tcol)[["open", "high", "low", "close"]].sort_index()
+    cols = ["open", "high", "low", "close"] + (["volume"] if "volume" in df.columns else [])
+    return df.set_index(tcol)[cols].sort_index()
 
 
 def load(key: str, inst: dict, csv_dir: str = None, period: str = "60d") -> pd.DataFrame:

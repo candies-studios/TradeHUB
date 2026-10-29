@@ -1,5 +1,6 @@
 """
-Backtest every enabled strategy (RSI-14 and EMA 9/20) on every enabled instrument in config.py.
+Backtest every enabled strategy (RSI-14, EMA 9/20, ORB-5M, VWAP-5M, PDH-PDL-5M)
+on every enabled instrument in config.py.
 
 Usage:
     python backtest.py                          # all instruments, last ~60 days of 5-min data (Yahoo Finance)
@@ -23,9 +24,82 @@ import data
 import strategy
 
 
+def run_setups(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series, strat: str) -> pd.DataFrame:
+    """ORB-5M / VWAP-5M / PDH-PDL-5M: stop-loss and 3R target are underlying price levels from setups.py."""
+    import setups
+    d = setups.prepare(df, inst)
+    if d.empty:
+        return pd.DataFrame()
+    units = inst["units_per_lot"] * inst["lots"]
+    sq_off_bar_start = (pd.Timestamp(inst["square_off"]) - timedelta(minutes=5)).time()
+    idx = d.index
+    trades, busy_until, day_pnl = [], None, {}
+    for s in setups.find_setups(d, inst, strat):
+        day = s["time"].date()
+        if busy_until is not None and s["close_time"] < busy_until:
+            continue                                     # still in the previous trade of this strategy
+        if config.DAILY_MAX_LOSS_RS is not None and day_pnl.get(day, 0) <= -config.DAILY_MAX_LOSS_RS:
+            continue
+        side, sgn = s["side"], (1 if s["side"] == "CE" else -1)
+        delta = strategy.delta_for(day, inst)
+        qf = strategy.quote_factor(inst, data.usdinr_on(fx, day))
+        if not setups.worth_it(s, inst, delta, qf):
+            continue
+        j = idx.searchsorted(s["close_time"])          # first candle after the confirmation candle
+        # entry: "close" = at the confirmation close; "stop" = when price trades through the trigger
+        if s["entry_type"] == "close":
+            entry, fill_j = s["entry"], j
+        else:
+            entry, fill_j = None, None
+            k = j
+            while k < len(d) and idx[k] < s["valid_until"] and idx[k].date() == day:
+                b = d.iloc[k]
+                if sgn * ((b.high if sgn > 0 else b.low) - s["entry"]) >= 0:
+                    entry, fill_j = (max(b.open, s["entry"]) if sgn > 0 else min(b.open, s["entry"])), k
+                    break
+                k += 1
+            if entry is None:
+                continue                                 # trigger never traded: no trade
+        if fill_j >= len(d) or idx[fill_j].date() != day:
+            continue
+        # exits on the underlying's stop / target levels; stop-loss first if both inside one candle
+        exit_px, reason, k = None, None, fill_j
+        while k < len(d) and idx[k].date() == day:
+            b = d.iloc[k]
+            if sgn * ((b.low if sgn > 0 else b.high) - s["stop"]) <= 0:
+                exit_px, reason = s["stop"], "stop-loss"
+            elif sgn * ((b.high if sgn > 0 else b.low) - s["target"]) >= 0:
+                exit_px, reason = s["target"], "target"
+            elif idx[k].time() >= sq_off_bar_start or k == len(d) - 1 or idx[k + 1].date() != day:
+                exit_px, reason = b.close, "time exit"
+            if reason:
+                break
+            k += 1
+        if reason is None:
+            continue
+        exit_pts = sgn * (exit_px - entry) * delta * qf
+        pnl = exit_pts * units - inst["cost_rs"]
+        exp = strategy.expiry_for(day, inst)
+        risk_pts = strategy._nice(delta * sgn * (entry - s["stop"]) * qf)
+        trades.append({
+            "instrument": key, "strategy": strat, "date": day, "signal_candle": s["time"], "entry_time": idx[fill_j],
+            "side": side, "strike": strategy.pick_strike(entry, side, day, inst), "expiry": exp, "expiry_day": exp == day,
+            "rsi_at_signal": None, "underlying_entry": round(entry, 2), "underlying_stop": round(s["stop"], 2),
+            "underlying_target": round(s["target"], 2),
+            "sl_points": risk_pts, "target_points": strategy._nice(risk_pts * config.REWARD_R),
+            "exit_time": idx[k] + timedelta(minutes=5), "exit_reason": reason,
+            "premium_points": round(exit_pts, 2), "lots": inst["lots"], "units": units, "pnl_rs": round(pnl, 0),
+        })
+        busy_until = idx[k] + timedelta(minutes=5)
+        day_pnl[day] = day_pnl.get(day, 0) + pnl
+    return pd.DataFrame(trades)
+
+
 def run(df: pd.DataFrame, key: str, inst: dict, fx: pd.Series, strat: str = "RSI") -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
+    if strat in config.SETUP_STRATEGIES:
+        return run_setups(df, key, inst, fx, strat)
     df = strategy.add_signals(df, strat)
     df = df[[strategy.in_session(ts, inst) for ts in df.index]]
     rows = list(df.itertuples())
@@ -118,7 +192,7 @@ def run_all(only=None, csv_dir=None, strategies=None):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--only", help="comma-separated instrument keys, e.g. NIFTY,SENSEX,GOLDM")
-    p.add_argument("--strategy", choices=["RSI", "EMA"], help="test only one strategy")
+    p.add_argument("--strategy", choices=list(config.STRATEGY_NAMES), help="test only one strategy")
     p.add_argument("--mode", choices=["reversal", "momentum"], help="override STRATEGY_MODE")
     p.add_argument("--html", help="also write the dashboard web page to this path, e.g. report.html")
     p.add_argument("--csv-dir", help="folder with <KEY>.csv candle files instead of downloading")
@@ -129,7 +203,7 @@ if __name__ == "__main__":
     res = run_all(only, a.csv_dir, [a.strategy] if a.strategy else None)
 
     print("\n" + "=" * 78)
-    print(f"Option buying | RSI-{config.RSI_PERIOD} ({config.STRATEGY_MODE}) and EMA {config.EMA_FAST}/{config.EMA_SLOW} | 5-min candles")
+    print(f"Option buying | {', '.join(config.STRATEGY_NAMES[s_] for s_ in config.enabled_strategies())} | 5-min candles")
     print("=" * 78)
     for key, r in res.items():
         for s_ in r["strategies"]:

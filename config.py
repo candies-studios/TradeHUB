@@ -1,17 +1,21 @@
 """
-Settings for the RSI-14 option-buying strategy.
+Settings for the option-buying strategies (RSI-14, EMA 9/20, ORB-5M, VWAP-5M, PDH-PDL-5M).
 Change the numbers here; you don't need to touch the other files.
 On GitHub: open this file, click the pencil icon, edit, then "Commit changes".
 """
 
 # ---------------- Strategies ----------------
-# Each strategy sends its own alerts (tagged [RSI-14] or [EMA 9/20]) and is tested separately.
+# Each strategy sends its own alerts (tagged with its name) and is tested separately.
 # Set one to False to switch it off.
 STRATEGIES = {
     "RSI": True,    # RSI-14 crosses your levels (below)
     "EMA": True,    # 9 EMA crosses the 20 EMA: above = buy CALL, below = buy PUT
+    "ORB": True,    # Opening Range Breakout + retest (first 15 minutes)
+    "VWAP": True,   # VWAP / 20 EMA pullback with 15-minute trend and ADX filters
+    "PDH": True,    # Previous-session high / low breakout + retest
 }
-STRATEGY_NAMES = {"RSI": "RSI-14", "EMA": "EMA 9/20"}
+STRATEGY_NAMES = {"RSI": "RSI-14", "EMA": "EMA 9/20", "ORB": "ORB-5M", "VWAP": "VWAP-5M", "PDH": "PDH-PDL-5M"}
+SETUP_STRATEGIES = ("ORB", "VWAP", "PDH")   # these use price levels for entry, stop-loss and a 3R target
 EMA_FAST = 9
 EMA_SLOW = 20
 
@@ -19,6 +23,31 @@ EMA_SLOW = 20
 def enabled_strategies():
     return [k for k, on in STRATEGIES.items() if on]
 
+
+# ---------------- ORB-5M / VWAP-5M / PDH-PDL-5M rules ----------------
+# Words like "decisively", "too far" and "nearby" in the rules are turned into multiples of
+# ATR(14) on the 5-minute chart, so they adapt to each instrument's normal movement.
+REWARD_R = 3.0                 # target = 3 x initial risk (3R)
+STOP_BUFFER_ATR = 0.10         # stop goes this much ATR beyond the retest / pullback swing
+MAX_RISK_ATR = 2.0             # reject a trade whose stop is more than this many ATR away
+RETEST_TOL_ATR = 0.15          # a candle within this distance of the level counts as a retest
+INSIDE_CLOSE_ATR = 0.25        # closing this far back inside the level cancels the setup
+RETEST_MAX_CANDLES = 12        # the retest must come within 1 hour of the breakout
+CONFIRM_MAX_CANDLES = 3        # the confirmation candle must come within 15 minutes of the retest
+ENTRY_VALID_CANDLES = 3        # "enter above the candle's high" orders stay valid for 15 minutes
+MIN_REWARD_COST_MULT = 4.0     # skip if the 3R reward is less than 4x the trading costs
+
+ORB_MINUTES = 15               # opening range = first 15 minutes of the session
+ORB_MAX_BREAKOUT_ATR = 1.0     # skip a breakout that has already run more than 1 ATR past the range
+
+VWAP_ADX_MIN = 20              # ADX(14) must be above this and rising (test 25 separately, don't tune to fit)
+VWAP_MAX_ENTRIES = 2           # at most two VWAP-5M entries per session
+VWAP_STOP_BUFFER_ATR = 0.25    # ATR buffer beyond the pullback swing
+VWAP_SWING_LOOKBACK = 12       # "latest meaningful swing" = the last hour of candles
+VWAP_TREND_LOOKBACK = 6        # the trend leg (ADX rising) must be within this many candles before the pullback
+SR_BLOCK_R = 2.0               # skip if the previous session's high/low sits within 2R of entry (blocks 3R)
+
+PDH_NEXT_LEVEL_R = 2.0         # skip if the next major level (5-session high/low) is within 2R of entry
 
 # ---------------- RSI signal (same rule for every instrument) ----------------
 RSI_PERIOD = 14

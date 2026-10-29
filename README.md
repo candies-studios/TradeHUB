@@ -1,11 +1,18 @@
-# RSI-14 + EMA 9/20 Options — Backtest Dashboard + Alerts
+# Five Option-Buying Strategies — Backtest Dashboard + Alerts
 
-A research tool for two option-buying strategies on 5-minute candles. Each sends its own alerts and is tested separately:
+A research tool for five option-buying strategies on 5-minute candles. Each sends its own alerts and is tested separately:
 
 - **RSI-14** (tag `[RSI-14]`): buy CALL when RSI crosses back above 30, buy PUT when it crosses back below 70.
 - **EMA 9/20** (tag `[EMA 9/20]`): buy CALL when the 9 EMA crosses above the 20 EMA, buy PUT when it crosses below.
+- **ORB-5M** (Opening Range Breakout + retest): the first 15 minutes set the range. A 5-minute candle closes beyond it (above/below VWAP, the 20 EMA and the 15-minute 20 EMA), price retests the broken level without closing back inside, and a confirmation candle closes beyond the retest candle. Entry at that close.
+- **VWAP-5M** (pullback with the trend): 15-minute trend with ADX(14) above 20 and rising, a pullback to VWAP / 20 EMA that holds the last swing, then a confirmation candle. Entry only when price trades beyond the confirmation candle's high (low). At most 2 per session.
+- **PDH-PDL-5M** (previous session high/low breakout + retest): a 5-minute close beyond yesterday's high (low), a retest that holds, then a confirmation candle. Entry beyond its high (low). One attempt per level per direction.
 
-Switch either off in `config.py` under `STRATEGIES`. Each strategy has its own open trade and its own daily limit (`MAX_TRADES_PER_DAY`) per instrument, so both can alert on the same instrument. It **does not place orders**; you place trades yourself on Sahi.
+For ORB, VWAP and PDH the stop goes beyond the retest/pullback swing (plus a small ATR buffer), the target is **3R**, and a setup is skipped if the stop is too wide for current volatility, a major level blocks the way to the target, or brokerage would eat the reward. The alert tells you the index level for entry, stop and target, plus the estimated option prices. All their rules and numbers are in `config.py`. For commodities, "session" means the MCX session (09:00–23:30), not the calendar day.
+
+On the website, the **Strategy comparison** dropdown shows all five side by side, or one strategy at a time; the instrument sections below follow the same choice.
+
+Switch any strategy off in `config.py` under `STRATEGIES`. Each strategy has its own open trade and its own daily limit (`MAX_TRADES_PER_DAY`) per instrument, so both can alert on the same instrument. It **does not place orders**; you place trades yourself on Sahi.
 
 | Instrument | Exchange | Lot | Expiry | Alerts between (IST) |
 |---|---|---|---|---|
@@ -101,6 +108,7 @@ Click `config.py` in the repository, click the **pencil icon**, change a number 
 |---|---|
 | `config.py` | All strategy settings |
 | `strategy.py` | RSI, signals, strikes, expiries and stop-loss sizing |
+| `setups.py` | ORB-5M, VWAP-5M and PDH-PDL-5M rules (VWAP, ADX, 15-min trend, previous-session levels) |
 | `data.py` | Downloads market data and converts commodity prices to rupees |
 | `backtest.py` | Tests the strategy on past data |
 | `report.py` | Builds the dashboard web page |
@@ -116,5 +124,7 @@ Click `config.py` in the repository, click the **pencil icon**, change a number 
 ## Things to know
 - **The backtest is optimistic.** Free data has no historical option prices, so premiums are estimated from Nifty's move (delta 0.6 ITM, 0.5 ATM on expiry). Time decay is ignored. A losing backtest is a clear "no".
 - **Check the RSI value against Sahi's 5-minute RSI-14** for the first few days. Yahoo data can lag slightly.
+- **VWAP on indices:** Nifty, Sensex and Bank Nifty have no volume in the free data, so their VWAP is the session's average price. Commodities use real (international) volume. Compare with Sahi's VWAP for a few days.
+- **ADX 20 vs 25:** test it by changing `VWAP_ADX_MIN` in `config.py`; the dashboard rebuilds itself. Don't keep changing settings until the past looks good — that just fits the noise.
 - **Holidays:** add NSE holidays to `NSE_HOLIDAYS` in `config.py` so the expiry dates shown are right. Update `LOT_SIZE` if NSE changes it.
 - **Risk:** at 3 lots, a stopped-out trade loses about ₹4,000. Paper-trade the alerts for a few weeks before using real money. This is a research tool, not financial advice.

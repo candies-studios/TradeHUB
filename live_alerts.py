@@ -1,5 +1,5 @@
 """
-Live alerts for every enabled strategy (RSI-14, EMA 9/20) and instrument in config.py
+Live alerts for every enabled strategy (RSI-14, EMA 9/20, ORB-5M, VWAP-5M, PDH-PDL-5M) and instrument in config.py
 (Nifty, Sensex, Bank Nifty, Gold Mini, Silver Mini, Crude Oil, Natural Gas).
 You place the orders yourself on Sahi.
 
@@ -204,6 +204,144 @@ class Scanner:
                            "est_premium": est if est else ""})
 
 
+class SetupScanner(Scanner):
+    """ORB-5M / VWAP-5M / PDH-PDL-5M. Same rules as the backtest (setups.py); the alert gives the
+    entry trigger plus stop-loss and 3R target, as option prices (indices) and as index levels."""
+
+    def process(self, df: pd.DataFrame):
+        import setups
+        if df.empty:
+            return
+        d = setups.prepare(df, self.inst)
+        if d.empty:
+            self.last_seen = df.index[-1]
+            return
+        found = {s["time"]: s for s in setups.find_setups(d, self.inst, self.strat)}
+        new = d.tail(1) if self.last_seen is None else d[d.index > self.last_seen]
+        for ts, bar in new.iterrows():
+            self._handle_setup(ts, bar, found.get(ts))
+        self.last_seen = df.index[-1]
+
+    def _handle_setup(self, ts, bar, s):
+        import setups
+        inst, name = self.inst, self.inst["name"]
+        d = ts.date()
+        if d != self.day:
+            self._new_day(d)
+        close_time = ts + timedelta(minutes=5)
+
+        if self.pos and ts >= self.pos["from"]:        # heads-up on the underlying entry / stop / target levels
+            p = self.pos
+            sgn = 1 if p["side"] == "CE" else -1
+            if not p["filled"]:
+                if sgn * ((bar.high if sgn > 0 else bar.low) - p["trigger"]) >= 0:
+                    p["filled"] = True
+                elif ts >= p["valid_until"]:
+                    send(f"ℹ️ {self.tag} {name} {p['label']}: entry level was not reached in time — skip this one.", self.telegram)
+                    self.pos = None
+            if self.pos and p["filled"]:
+                hit = ("likely hit your STOP-LOSS" if sgn * ((bar.low if sgn > 0 else bar.high) - p["stop"]) <= 0 else
+                       "likely hit your TARGET" if sgn * ((bar.high if sgn > 0 else bar.low) - p["target"]) >= 0 else None)
+                if hit:
+                    lvl = f" ({name} {_price(p['stop'] if 'STOP' in hit else p['target'])})" if inst["segment"] == "index" else " (estimated)"
+                    send(f"ℹ️ {self.tag} {name} {p['label']} has {hit}{lvl}. Check your Sahi order book.", self.telegram)
+                    self.pos = None
+
+        if close_time.time() >= strategy.t(inst["square_off"]) and not self.squared_off:
+            self.squared_off = True
+            if self.pos:
+                send(f"⏰ {self.tag} {inst['square_off']} — EXIT {name} {self.pos['label']} now if it is still open.", self.telegram)
+                self.pos = None
+            return
+
+        if not s or self.pos or not strategy.under_daily_limit(self.trades_today):
+            return
+        side, sgn = s["side"], (1 if s["side"] == "CE" else -1)
+        delta = strategy.delta_for(d, inst)
+        qf = strategy.quote_factor(inst, data.usdinr_on(self.fx, d))
+        if not setups.worth_it(s, inst, delta, qf):
+            print(f"{name} {self.tag}: setup at {close_time:%H:%M} skipped, 3R reward too small after costs.")
+            return
+        if self.now and s["entry_type"] == "stop" and self.now > s["valid_until"]:
+            print(f"{name} {self.tag}: setup at {close_time:%H:%M} found too late (entry window over), not sent.")
+            return
+
+        kind = "CALL" if side == "CE" else "PUT"
+        lots = inst["lots"]
+        entry, stop, target = s["entry"], s["stop"], s["target"]
+        strike = strategy.pick_strike(entry, side, d, inst)
+        expiry = strategy.expiry_for(d, inst)
+        sl_pts = strategy._nice(delta * s["risk"] * qf)
+        tg_pts = strategy._nice(sl_pts * config.REWARD_R)
+        late = int((self.now - close_time).total_seconds() // 60) if self.now else 0
+        when = f"{close_time:%d %b %Y, %H:%M}" + (f"  (⏱️ {late} min late)" if late > 10 else "")
+        short = name.replace(" 50", "")
+        word = "above" if sgn > 0 else "below"
+        index = inst["segment"] == "index"
+
+        if s["entry_type"] == "close":
+            entry_txt = f"now ({short} {_price(entry)})" if index else "now, at the market"
+        elif index:
+            entry_txt = f"only when {short} trades {word} {_price(entry)} (valid till {s['valid_until']:%H:%M})"
+        else:
+            entry_txt = (f"only if price breaks the signal candle's {'high' if sgn > 0 else 'low'} "
+                         f"(valid till {s['valid_until']:%H:%M})")
+
+        est = est_sl = est_tg = None
+        if index and config.ESTIMATE_PREMIUM:
+            vol = self.vix / 100 * config.VIX_MULTIPLIER.get(self.key, 1.0)
+            years = strategy.years_to_expiry(close_time.to_pydatetime(), expiry, inst["session"][1])
+            bs = lambda spot: strategy.tick(strategy.bs_premium(spot, strike, years, vol, side))
+            est, est_sl, est_tg = bs(entry), bs(stop), bs(target)
+            if est < 0.5:
+                est = None
+        if index:
+            label = f"{strike} {side}"
+            which = f"{self.key} {expiry:%d %b} expiry, {lots} lot{'s' if lots > 1 else ''} ({config.STRATEGY_NAMES[self.strat]})"
+            on_exp = expiry == d and config.ATM_ON_EXPIRY_DAY
+            strike_txt = f"{strike}" + (" (ATM, expiry day)" if on_exp else "")
+        else:
+            label = f"{side} option"
+            which = f"{self.key} nearest expiry, {lots} lot{'s' if lots > 1 else ''} ({config.STRATEGY_NAMES[self.strat]})"
+            strike_txt = f"{config.ITM_STRIKES} strike in-the-money in Sahi's option chain"
+        if est:
+            prices = (f"Buy price (approx.) - ₹{est:,.2f}  (estimate, confirm in Sahi)\n"
+                      f"Stop loss price - ₹{max(est_sl, 0.05):,.2f}  (exit if {short} {'falls to' if sgn > 0 else 'rises to'} {_price(stop)})\n"
+                      f"Target price - ₹{est_tg:,.2f}  (3R, {short} {_price(target)})\n")
+        elif index:
+            prices = (f"Stop loss price - your buy price − {_pts(sl_pts)}  ({short} {_price(stop)})\n"
+                      f"Target price - your buy price + {_pts(tg_pts)}  (3R, {short} {_price(target)})\n")
+        else:
+            prices = (f"Stop loss price - your buy price − {_pts(sl_pts)} (approx.)\n"
+                      f"Target price - your buy price + {_pts(tg_pts)} (approx., 3R)\n")
+        text = (f"Instrument name - {name} ({inst['exchange']})\n"
+                f"Which option - {which}\n"
+                f"CE/PE - {side} ({kind})\n"
+                f"Strike price to buy - {strike_txt}\n"
+                f"Entry - {entry_txt}\n"
+                + prices +
+                f"Time of the signal - {when}")
+        send(text, self.telegram)
+
+        self.trades_today += 1
+        self.pos = {"side": side, "stop": stop, "target": target, "label": label, "from": close_time,
+                    "trigger": entry, "filled": s["entry_type"] == "close", "valid_until": s["valid_until"]}
+        if self.on_alert:
+            self.on_alert({"alert_time": f"{close_time:%Y-%m-%d %H:%M}", "instrument": self.key, "name": name,
+                           "strategy": self.strat, "side": side, "strike": strike if strike is not None else "",
+                           "expiry": f"{expiry:%Y-%m-%d}" if expiry else "nearest",
+                           "underlying": round(entry, 2), "rsi": "", "lots": lots,
+                           "qty": lots * inst["units_per_lot"],
+                           "sl_pts": round(est - est_sl, 2) if est else sl_pts,
+                           "target_pts": round(est_tg - est, 2) if est else tg_pts,
+                           "est_premium": est if est else ""})
+
+
+def make_scanner(key, inst, strat, telegram=True, fx=None):
+    cls = SetupScanner if strat in config.SETUP_STRATEGIES else Scanner
+    return cls(key, inst, strat, telegram=telegram, fx=fx)
+
+
 def _open_now(inst, now: datetime) -> bool:
     a, b = inst["session"]
     end = (datetime.combine(now.date(), strategy.t(b)) + timedelta(minutes=6)).time()
@@ -244,7 +382,7 @@ def once(csv_dir: str = None, state_file: str = ".alert_state.json", now: dateti
         for strat in config.enabled_strategies():
             sk = f"{key}:{strat}"
             st = state.get(sk) or (state.get(key, {}) if strat == "RSI" else {})   # older state used plain keys
-            sc = Scanner(key, inst, strat, fx=fx)
+            sc = make_scanner(key, inst, strat, fx=fx)
             if st.get("day") == str(last.date()):
                 sc.day, sc.trades_today = last.date(), int(st.get("count", 0))
             seen = pd.Timestamp(st["last"]) if st.get("last") else None
@@ -326,12 +464,12 @@ def seconds_to_next_check(now: datetime) -> float:
 
 def live():
     fx = data.usdinr_series()
-    scanners = {(k, s_): Scanner(k, v, s_, fx=fx) for k, v in config.enabled_instruments().items()
+    scanners = {(k, s_): make_scanner(k, v, s_, fx=fx) for k, v in config.enabled_instruments().items()
                 for s_ in config.enabled_strategies()}
     for sc in scanners.values():
         sc.on_alert = log_alert
     names = ", ".join(v["name"] for v in config.enabled_instruments().values())
-    strats = " and ".join(config.STRATEGY_NAMES[s_] for s_ in config.enabled_strategies())
+    strats = ", ".join(config.STRATEGY_NAMES[s_] for s_ in config.enabled_strategies())
     send(f"Alerts started ({strats}) for: {names}.")
     while True:
         now = now_ist()

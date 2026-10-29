@@ -48,7 +48,10 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
 .tag{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap}
 .tag.RSI{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .tag.EMA{background:color-mix(in srgb,#c2410c 15%,transparent);color:#c2410c}
-@media (prefers-color-scheme:dark){.tag.EMA{color:#fb923c}}
+.tag.ORB{background:color-mix(in srgb,#0e7490 15%,transparent);color:#0e7490}
+.tag.VWAP{background:color-mix(in srgb,#7c3aed 15%,transparent);color:#7c3aed}
+.tag.PDH{background:color-mix(in srgb,#be185d 15%,transparent);color:#be185d}
+@media (prefers-color-scheme:dark){.tag.EMA{color:#fb923c}.tag.ORB{color:#22d3ee}.tag.VWAP{color:#b197fc}.tag.PDH{color:#f472b6}}
 .bystrat{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13.5px;color:var(--ink2);margin:-4px 0 16px}
 .bystrat b{color:var(--ink)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
@@ -90,7 +93,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     <p class="muted">For alerts you noted elsewhere, or when the bot's list hasn't updated yet.</p>
     <form class="inputs" id="manual">
       <label for="m-time">Alert time<input type="datetime-local" id="m-time" required></label>
-      <label for="m-strat">Strategy<select id="m-strat"><option value="RSI">RSI-14</option><option value="EMA">EMA 9/20</option></select></label>
+      <label for="m-strat">Strategy<select id="m-strat"><option value="RSI">RSI-14</option><option value="EMA">EMA 9/20</option><option value="ORB">ORB-5M</option><option value="VWAP">VWAP-5M</option><option value="PDH">PDH-PDL-5M</option></select></label>
       <label for="m-inst">Instrument<select id="m-inst"></select></label>
       <label for="m-side">Side<select id="m-side"><option value="CE">CE (call)</option><option value="PE">PE (put)</option></select></label>
       <label for="m-strike">Strike<input type="number" id="m-strike" step="any" placeholder="optional"></label>
@@ -116,7 +119,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
     SILVERM: { name: "Silver Mini", units: 5, cost: 100 }, CRUDEOIL: { name: "Crude Oil", units: 100, cost: 100 },
     NATURALGAS: { name: "Natural Gas", units: 1250, cost: 100 } };
   const instOf = k => INST[k] || INST.NIFTY;
-  const STRAT = { RSI: "RSI-14", EMA: "EMA 9/20" };
+  const STRAT = { RSI: "RSI-14", EMA: "EMA 9/20", ORB: "ORB-5M", VWAP: "VWAP-5M", PDH: "PDH-PDL-5M" };
   const stratOf = k => STRAT[k] ? k : "RSI";
   const idOf = x => [x.alert_time, x.instrument || "NIFTY", stratOf(x.strategy), x.side].join("|");
   const tag = k => `<span class="tag ${stratOf(k)}">${STRAT[stratOf(k)]}</span>`;
@@ -162,7 +165,7 @@ th{font-size:12px;color:var(--ink2);font-weight:600}
       const id = idOf(a).replace(/\W/g, "");
       return `<div class="alert" data-t="${esc(idOf(a))}">
         <div>${tag(a.strategy)} <b>${esc(a.name || "Nifty 50")} ${a.strike ? esc(a.strike) + " " : ""}<span class="side ${esc(a.side)}">${esc(a.side)}</span></b>
-          <div class="meta">${fmtTime(a.alert_time)} · ${a.strike ? "expiry " + esc(a.expiry) : "pick a 1-strike ITM option, nearest expiry"} · ${esc(a.lots)} lot${+a.lots > 1 ? "s" : ""} · price ${esc(a.underlying || a.nifty || "")} · RSI ${esc(a.rsi)}</div></div>
+          <div class="meta">${fmtTime(a.alert_time)} · ${a.strike ? "expiry " + esc(a.expiry) : "pick a 1-strike ITM option, nearest expiry"} · ${esc(a.lots)} lot${+a.lots > 1 ? "s" : ""} · ${a.strategy === "ORB" || a.strategy === "VWAP" || a.strategy === "PDH" ? "entry level" : "price"} ${esc(a.underlying || a.nifty || "")}${a.rsi ? " · RSI " + esc(a.rsi) : ""}</div></div>
         <div class="inputs">
           <label for="e${id}">Entry ₹<input type="number" step="0.05" min="0" id="e${id}" class="pe" placeholder="${a.est_premium ? "≈ " + esc(a.est_premium) : ""}"></label>
           <label for="x${id}">Exit ₹<input type="number" step="0.05" min="0" id="x${id}" class="px"></label>
