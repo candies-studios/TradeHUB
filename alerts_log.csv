@@ -60,3 +60,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-29 15:35,CRUDEOIL,Crude Oil,EMA,PE,,nearest,101.33,45.2,1,100,30.0,60.0,
 2026-10-29 15:55,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.04,44.0,1,1250,0.58,1.0,
 2026-10-29 16:00,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.04,45.1,1,1250,0.57,1.0,
+2026-10-29 16:05,CRUDEOIL,Crude Oil,EMA,CE,,nearest,101.56,53.3,1,100,16.0,32.0,
