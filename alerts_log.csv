@@ -94,3 +94,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-30 10:55,SENSEX,BSE Sensex,EMA,PE,74300,2026-11-05,74153.05,50.0,1,20,72.0,145.0,627.95
 2026-10-30 11:15,BANKNIFTY,Bank Nifty,EMA,CE,54700,2026-11-23,54784.6,57.4,1,30,57.0,115.0,1252.25
 2026-10-30 11:25,CRUDEOIL,Crude Oil,EMA,CE,,nearest,103.41,59.4,1,100,12.0,24.0,
+2026-10-30 11:35,GOLDM,Gold Mini,EMA,PE,,nearest,4001.7,39.4,1,10,125.0,250.0,
