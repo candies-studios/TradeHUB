@@ -90,3 +90,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-10-30 10:50,BANKNIFTY,Bank Nifty,VWAP,PE,54700,2026-11-23,54630.75,,1,30,38.55,121.9,1009.0
 2026-10-30 10:45,GOLDM,Gold Mini,EMA,CE,,nearest,4010.1,56.3,1,10,94.0,190.0,
 2026-10-30 10:40,SILVERM,Silver Mini,EMA,CE,,nearest,51.56,56.6,1,5,255.0,510.0,
+2026-10-30 10:55,NIFTY,Nifty 50,EMA,CE,22900,2026-11-03,22962.3,56.5,3,195,20.0,40.0,195.15
