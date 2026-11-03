@@ -133,3 +133,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-03 09:40,SILVERM,Silver Mini,VWAP,PE,,nearest,49.67,,1,5,295.0,885.0,
 2026-11-03 09:50,NIFTY,Nifty 50,VWAP,CE,23650,2026-11-03,23638.85,,3,195,17.2,102.15,33.35
 2026-11-03 09:45,SILVERM,Silver Mini,VWAP,PE,,nearest,49.74,,1,5,170.0,510.0,
+2026-11-03 10:00,NATURALGAS,Natural Gas,EMA,CE,,nearest,2.88,55.6,1,1250,0.21,0.42,
