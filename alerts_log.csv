@@ -190,3 +190,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-04 21:00,SILVERM,Silver Mini,EMA,PE,,nearest,51.93,43.1,1,5,430.0,860.0,
 2026-11-04 21:00,CRUDEOIL,Crude Oil,EMA,CE,,nearest,93.84,51.8,1,100,31.0,62.0,
 2026-11-04 21:05,NATURALGAS,Natural Gas,EMA,CE,,nearest,2.92,61.0,1,1250,0.91,2.0,
+2026-11-04 21:35,SILVERM,Silver Mini,EMA,CE,,nearest,52.25,59.8,1,5,375.0,750.0,
