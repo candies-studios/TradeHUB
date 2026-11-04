@@ -158,3 +158,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-03 23:00,CRUDEOIL,Crude Oil,EMA,CE,,nearest,96.09,54.0,1,100,20.0,40.0,
 2026-11-04 09:15,CRUDEOIL,Crude Oil,EMA,CE,,nearest,95.66,53.8,1,100,16.0,32.0,
 2026-11-04 09:30,BANKNIFTY,Bank Nifty,PDH,CE,55700,2026-11-23,55819.45,,1,30,66.4,212.6,1187.45
+2026-11-04 09:35,BANKNIFTY,Bank Nifty,VWAP,CE,55800,2026-11-23,55853.9,,1,30,91.05,299.6,1152.55
