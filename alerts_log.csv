@@ -174,3 +174,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-04 11:00,NIFTY,Nifty 50,EMA,PE,23850,2026-11-09,23813.2,45.8,3,195,20.0,40.0,187.2
 2026-11-04 11:05,GOLDM,Gold Mini,ORB,CE,,nearest,3971.9,,1,10,140.0,420.0,
 2026-11-04 11:05,NATURALGAS,Natural Gas,RSI,CE,,nearest,2.88,34.0,1,1250,0.46,0.92,
+2026-11-04 11:10,GOLDM,Gold Mini,PDH,CE,,nearest,3992.0,,1,10,190.0,570.0,
