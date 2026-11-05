@@ -207,3 +207,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-05 10:50,NATURALGAS,Natural Gas,RSI,CE,,nearest,2.93,30.8,1,1250,0.2,0.4,
 2026-11-05 11:10,NATURALGAS,Natural Gas,EMA,CE,,nearest,2.95,63.2,1,1250,0.32,0.64,
 2026-11-05 17:55,GOLDM,Gold Mini,EMA,PE,,nearest,4139.2,49.1,1,10,97.0,195.0,
+2026-11-05 18:15,NATURALGAS,Natural Gas,EMA,CE,,nearest,2.94,51.7,1,1250,0.7,1.5,
