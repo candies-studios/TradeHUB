@@ -196,3 +196,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-05 09:20,CRUDEOIL,Crude Oil,VWAP,PE,,nearest,86.77,,1,100,11.0,33.0,
 2026-11-05 09:30,GOLDM,Gold Mini,VWAP,CE,,nearest,4154.0,,1,10,220.0,660.0,
 2026-11-05 09:30,CRUDEOIL,Crude Oil,VWAP,PE,,nearest,86.74,,1,100,11.0,33.0,
+2026-11-05 09:40,NIFTY,Nifty 50,VWAP,CE,24300,2026-11-09,24371.6,,3,195,43.8,165.85,208.0
