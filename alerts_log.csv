@@ -253,3 +253,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-06 13:30,BANKNIFTY,Bank Nifty,RSI,PE,58400,2026-11-23,58303.05,65.7,1,30,86.0,170.0,1030.75
 2026-11-06 13:40,SILVERM,Silver Mini,ORB,CE,,nearest,51.72,,1,5,265.0,795.0,
 2026-11-06 13:50,SILVERM,Silver Mini,ORB,CE,,nearest,51.75,,1,5,285.0,855.0,
+2026-11-06 13:55,NATURALGAS,Natural Gas,RSI,PE,,nearest,3.03,66.5,1,1250,0.68,1.5,
