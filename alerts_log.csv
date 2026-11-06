@@ -229,3 +229,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-06 10:05,BANKNIFTY,Bank Nifty,PDH,CE,57800,2026-11-23,57921.05,,1,30,79.65,258.15,1206.65
 2026-11-06 10:05,CRUDEOIL,Crude Oil,VWAP,CE,,nearest,92.13,,1,100,21.0,63.0,
 2026-11-06 10:15,SENSEX,BSE Sensex,RSI,PE,79900,2026-11-12,79829.31,69.8,1,20,285.0,570.0,691.0
+2026-11-06 10:25,NATURALGAS,Natural Gas,RSI,PE,,nearest,2.98,54.4,1,1250,0.73,1.5,
