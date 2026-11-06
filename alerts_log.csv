@@ -222,3 +222,5 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-06 09:40,NIFTY,Nifty 50,EMA,CE,24500,2026-11-09,24552.7,58.8,3,195,20.0,40.0,189.8
 2026-11-06 09:35,GOLDM,Gold Mini,VWAP,PE,,nearest,4051.9,,1,10,105.0,315.0,
 2026-11-06 09:45,NATURALGAS,Natural Gas,EMA,PE,,nearest,2.98,47.3,1,1250,0.35,0.7,
+2026-11-06 09:55,BANKNIFTY,Bank Nifty,EMA,CE,57800,2026-11-23,57897.3,65.2,1,30,115.0,230.0,1189.75
+2026-11-06 09:50,NATURALGAS,Natural Gas,EMA,PE,,nearest,2.98,51.3,1,1250,0.35,0.7,
