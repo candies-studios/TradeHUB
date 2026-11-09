@@ -268,3 +268,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-06 22:55,SILVERM,Silver Mini,EMA,PE,,nearest,51.92,47.9,1,5,295.0,590.0,
 2026-11-09 09:15,NATURALGAS,Natural Gas,RSI,PE,,nearest,3.02,67.6,1,1250,0.28,0.56,
 2026-11-09 09:25,GOLDM,Gold Mini,VWAP,CE,,nearest,4129.8,,1,10,74.0,220.0,
+2026-11-09 09:35,BANKNIFTY,Bank Nifty,PDH,CE,59100,2026-11-23,59226.65,,1,30,103.4,342.9,1201.05
