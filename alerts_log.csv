@@ -284,3 +284,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-09 17:10,CRUDEOIL,Crude Oil,RSI,CE,,nearest,88.21,30.1,1,100,30.0,60.0,
 2026-11-09 17:20,GOLDM,Gold Mini,RSI,PE,,nearest,4120.7,68.8,1,10,96.0,190.0,
 2026-11-09 17:25,NATURALGAS,Natural Gas,VWAP,PE,,nearest,3.01,,1,1250,0.62,2.0,
+2026-11-09 18:15,GOLDM,Gold Mini,RSI,PE,,nearest,4125.9,69.2,1,10,82.0,165.0,
