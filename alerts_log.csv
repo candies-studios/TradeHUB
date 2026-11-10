@@ -303,3 +303,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-10 11:25,CRUDEOIL,Crude Oil,VWAP,PE,,nearest,85.94,,1,100,17.0,51.0,
 2026-11-10 11:25,CRUDEOIL,Crude Oil,PDH,PE,,nearest,85.94,,1,100,15.0,45.0,
 2026-11-10 11:30,CRUDEOIL,Crude Oil,EMA,CE,,nearest,86.05,51.1,1,100,14.0,28.0,
+2026-11-10 12:05,SILVERM,Silver Mini,EMA,PE,,nearest,53.15,44.6,1,5,305.0,610.0,
