@@ -294,3 +294,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-09 21:10,SILVERM,Silver Mini,EMA,CE,,nearest,52.78,56.0,1,5,335.0,670.0,
 2026-11-10 09:45,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.21,62.6,1,1250,0.3,0.6,
 2026-11-10 09:45,NATURALGAS,Natural Gas,VWAP,CE,,nearest,3.21,,1,1250,0.72,2.0,
+2026-11-10 09:45,SILVERM,Silver Mini,VWAP,CE,,nearest,53.01,,1,5,105.0,315.0,
