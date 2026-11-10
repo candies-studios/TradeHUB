@@ -308,3 +308,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-10 12:45,GOLDM,Gold Mini,EMA,PE,,nearest,4127.7,45.3,1,10,100.0,200.0,
 2026-11-10 13:05,CRUDEOIL,Crude Oil,ORB,PE,,nearest,85.59,,1,100,8.5,26.0,
 2026-11-10 13:50,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.22,47.9,1,1250,0.69,1.5,
+2026-11-10 20:50,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.25,50.5,1,1250,0.97,2.0,
