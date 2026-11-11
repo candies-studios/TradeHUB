@@ -317,3 +317,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-11 09:35,NIFTY,Nifty 50,VWAP,CE,25300,2026-11-17,25371.4,,3,195,39.9,140.6,285.4
 2026-11-11 09:40,BANKNIFTY,Bank Nifty,VWAP,CE,60600,2026-11-23,60745.15,,1,30,144.4,503.3,1121.45
 2026-11-11 09:45,CRUDEOIL,Crude Oil,ORB,CE,,nearest,86.71,,1,100,5.5,16.0,
+2026-11-11 09:55,GOLDM,Gold Mini,EMA,PE,,nearest,4051.3,47.1,1,10,77.0,155.0,
