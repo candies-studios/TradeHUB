@@ -345,3 +345,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-11 13:40,NIFTY,Nifty 50,RSI,CE,25150,2026-11-17,25216.5,30.3,3,195,20.0,40.0,278.3
 2026-11-11 19:30,GOLDM,Gold Mini,RSI,CE,,nearest,4040.7,31.1,1,10,100.0,200.0,
 2026-11-11 19:35,CRUDEOIL,Crude Oil,EMA,PE,,nearest,86.99,42.9,1,100,18.0,36.0,
+2026-11-11 19:45,CRUDEOIL,Crude Oil,EMA,PE,,nearest,87.14,48.5,1,100,17.0,34.0,
