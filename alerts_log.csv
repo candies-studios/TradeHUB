@@ -386,3 +386,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-12 12:20,NIFTY,Nifty 50,RSI,CE,25200,2026-11-17,25231.4,33.5,3,195,20.0,40.0,229.55
 2026-11-12 18:10,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.29,54.0,1,1250,0.97,2.0,
 2026-11-12 18:25,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.28,47.3,1,1250,1.0,2.0,
+2026-11-12 18:40,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.3,57.1,1,1250,1.5,3.0,
