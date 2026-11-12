@@ -370,3 +370,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-12 10:20,BANKNIFTY,Bank Nifty,ORB,CE,61200,2026-11-23,61343.05,,1,30,84.3,277.6,1057.6
 2026-11-12 10:15,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.27,44.4,1,1250,0.67,1.5,
 2026-11-12 10:25,NATURALGAS,Natural Gas,RSI,PE,,nearest,3.27,69.9,1,1250,0.44,0.88,
+2026-11-12 10:30,NATURALGAS,Natural Gas,RSI,PE,,nearest,3.27,61.7,1,1250,0.47,0.94,
