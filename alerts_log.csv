@@ -380,3 +380,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-12 11:25,SENSEX,BSE Sensex,EMA,PE,82100,2026-11-12,82067.95,46.6,1,20,48.0,96.0,135.7
 2026-11-12 11:30,CRUDEOIL,Crude Oil,VWAP,PE,,nearest,85.58,,1,100,8.5,26.0,
 2026-11-12 11:30,SENSEX,BSE Sensex,EMA,PE,82100,2026-11-12,82099.26,49.1,1,20,47.0,94.0,118.4
+2026-11-12 11:40,CRUDEOIL,Crude Oil,EMA,CE,,nearest,85.96,56.3,1,100,15.0,30.0,
