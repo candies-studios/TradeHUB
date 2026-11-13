@@ -411,3 +411,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-13 10:40,SENSEX,BSE Sensex,EMA,CE,81700,2026-11-19,81814.75,53.8,1,20,79.0,160.0,797.85
 2026-11-13 17:00,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.27,42.9,1,1250,0.5,1.0,
 2026-11-13 17:05,CRUDEOIL,Crude Oil,EMA,CE,,nearest,88.47,56.5,1,100,14.0,28.0,
+2026-11-13 17:55,SILVERM,Silver Mini,VWAP,CE,,nearest,49.97,,1,5,68.0,205.0,
