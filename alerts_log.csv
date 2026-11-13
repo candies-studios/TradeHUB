@@ -415,3 +415,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-13 18:10,GOLDM,Gold Mini,EMA,PE,,nearest,3895.7,46.4,1,10,87.0,175.0,
 2026-11-13 18:25,SILVERM,Silver Mini,EMA,PE,,nearest,49.9,45.6,1,5,185.0,370.0,
 2026-11-13 19:05,CRUDEOIL,Crude Oil,EMA,PE,,nearest,88.38,43.5,1,100,15.0,30.0,
+2026-11-13 19:10,GOLDM,Gold Mini,EMA,CE,,nearest,3902.2,56.8,1,10,175.0,350.0,
