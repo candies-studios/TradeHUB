@@ -451,3 +451,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-16 12:00,BANKNIFTY,Bank Nifty,EMA,CE,61400,2026-11-23,61481.75,58.3,1,30,62.0,125.0,754.5
 2026-11-16 18:55,SILVERM,Silver Mini,RSI,CE,,nearest,47.38,35.0,1,5,255.0,510.0,
 2026-11-16 19:00,SILVERM,Silver Mini,RSI,CE,,nearest,47.31,31.5,1,5,265.0,530.0,
+2026-11-16 19:05,SILVERM,Silver Mini,RSI,CE,,nearest,47.31,34.1,1,5,280.0,560.0,
