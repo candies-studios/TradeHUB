@@ -449,3 +449,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-16 11:50,CRUDEOIL,Crude Oil,RSI,PE,,nearest,88.85,67.8,1,100,12.0,24.0,
 2026-11-16 12:00,NIFTY,Nifty 50,EMA,CE,25200,2026-11-17,25255.15,57.8,3,195,20.0,40.0,121.8
 2026-11-16 12:00,BANKNIFTY,Bank Nifty,EMA,CE,61400,2026-11-23,61481.75,58.3,1,30,62.0,125.0,754.5
+2026-11-16 18:55,SILVERM,Silver Mini,RSI,CE,,nearest,47.38,35.0,1,5,255.0,510.0,
