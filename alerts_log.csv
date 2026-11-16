@@ -435,3 +435,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-16 10:50,CRUDEOIL,Crude Oil,VWAP,PE,,nearest,88.35,,1,100,5.0,15.0,
 2026-11-16 10:50,NATURALGAS,Natural Gas,VWAP,PE,,nearest,3.15,,1,1250,0.36,1.0,
 2026-11-16 11:00,NIFTY,Nifty 50,EMA,PE,25300,2026-11-17,25227.0,49.9,3,195,20.0,40.0,127.25
+2026-11-16 11:05,NIFTY,Nifty 50,EMA,CE,25200,2026-11-17,25242.2,53.5,3,195,20.0,40.0,114.55
