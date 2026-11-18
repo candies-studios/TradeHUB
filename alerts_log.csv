@@ -500,3 +500,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-18 09:55,BANKNIFTY,Bank Nifty,RSI,CE,61900,2026-11-23,62020.15,38.0,1,30,105.0,210.0,678.1
 2026-11-18 15:50,SILVERM,Silver Mini,EMA,PE,,nearest,45.7,45.5,1,5,225.0,450.0,
 2026-11-18 15:55,GOLDM,Gold Mini,EMA,PE,,nearest,3772.5,44.2,1,10,120.0,240.0,
+2026-11-18 16:05,CRUDEOIL,Crude Oil,EMA,CE,,nearest,83.4,51.5,1,100,18.0,36.0,
