@@ -547,3 +547,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-19 12:35,GOLDM,Gold Mini,EMA,CE,,nearest,3734.5,51.1,1,10,125.0,250.0,
 2026-11-19 12:45,BANKNIFTY,Bank Nifty,RSI,PE,62700,2026-11-23,62605.8,63.3,1,30,54.0,110.0,561.85
 2026-11-19 13:20,SILVERM,Silver Mini,EMA,PE,,nearest,45.24,46.1,1,5,230.0,460.0,
+2026-11-19 14:10,SENSEX,BSE Sensex,RSI,PE,82700,2026-11-19,82692.41,69.4,1,20,45.0,90.0,71.4
