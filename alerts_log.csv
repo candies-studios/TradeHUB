@@ -564,3 +564,6 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-20 10:25,BANKNIFTY,Bank Nifty,PDH,CE,63000,2026-11-23,63149.65,,1,30,93.6,337.05,596.6
 2026-11-20 10:30,BANKNIFTY,Bank Nifty,ORB,CE,63100,2026-11-23,63172.25,,1,30,98.7,365.95,558.1
 2026-11-20 10:40,NATURALGAS,Natural Gas,EMA,PE,,nearest,3.23,39.7,1,1250,0.36,0.72,
+2026-11-20 10:50,GOLDM,Gold Mini,VWAP,PE,,nearest,3519.7,,1,10,200.0,600.0,
+2026-11-20 10:50,SILVERM,Silver Mini,VWAP,PE,,nearest,41.17,,1,5,295.0,885.0,
+2026-11-20 10:50,CRUDEOIL,Crude Oil,EMA,PE,,nearest,82.84,47.7,1,100,13.0,26.0,
