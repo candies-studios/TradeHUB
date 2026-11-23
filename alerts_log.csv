@@ -628,3 +628,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-23 13:55,GOLDM,Gold Mini,RSI,CE,,nearest,3602.0,30.9,1,10,135.0,270.0,
 2026-11-23 14:20,SENSEX,BSE Sensex,RSI,CE,82600,2026-11-26,82652.76,31.7,1,20,62.0,125.0,600.85
 2026-11-23 20:55,CRUDEOIL,Crude Oil,RSI,CE,,nearest,80.57,31.0,1,100,28.0,56.0,
+2026-11-23 21:00,NATURALGAS,Natural Gas,RSI,CE,,nearest,3.45,30.6,1,1250,1.0,2.0,
