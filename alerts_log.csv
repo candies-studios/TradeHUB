@@ -622,3 +622,5 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-23 13:00,SILVERM,Silver Mini,RSI,PE,,nearest,42.69,68.7,1,5,255.0,510.0,
 2026-11-23 13:15,SENSEX,BSE Sensex,RSI,CE,82700,2026-11-26,82835.09,30.7,1,20,63.0,125.0,647.75
 2026-11-23 13:30,NIFTY,Nifty 50,RSI,CE,25450,2026-11-23,25459.2,32.5,3,195,20.0,40.0,32.8
+2026-11-23 13:35,GOLDM,Gold Mini,EMA,PE,,nearest,3618.8,45.3,1,10,130.0,260.0,
+2026-11-23 13:35,SILVERM,Silver Mini,EMA,PE,,nearest,42.4,43.6,1,5,235.0,470.0,
