@@ -636,3 +636,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-23 22:30,SILVERM,Silver Mini,EMA,PE,,nearest,43.41,50.8,1,5,375.0,750.0,
 2026-11-23 22:45,CRUDEOIL,Crude Oil,EMA,CE,,nearest,80.91,57.5,1,100,19.0,38.0,
 2026-11-24 09:15,CRUDEOIL,Crude Oil,EMA,PE,,nearest,80.0,44.3,1,100,12.0,24.0,
+2026-11-24 09:30,SILVERM,Silver Mini,RSI,CE,,nearest,42.46,30.5,1,5,275.0,550.0,
