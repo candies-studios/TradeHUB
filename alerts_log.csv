@@ -674,3 +674,5 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-25 10:20,BANKNIFTY,Bank Nifty,VWAP,CE,63700,2026-12-29,63761.4,,1,30,139.05,453.3,1921.3
 2026-11-25 10:25,CRUDEOIL,Crude Oil,EMA,PE,,nearest,80.72,19.0,1,100,10.0,20.0,
 2026-11-25 10:25,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.72,73.8,1,1250,0.48,0.96,
+2026-11-25 10:30,CRUDEOIL,Crude Oil,EMA,PE,,nearest,80.7,18.7,1,100,10.0,20.0,
+2026-11-25 10:30,NATURALGAS,Natural Gas,EMA,CE,,nearest,3.72,74.9,1,1250,0.5,1.0,
