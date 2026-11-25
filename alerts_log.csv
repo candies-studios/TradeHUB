@@ -685,3 +685,4 @@ alert_time,instrument,name,strategy,side,strike,expiry,underlying,rsi,lots,qty,s
 2026-11-25 11:40,SILVERM,Silver Mini,RSI,CE,,nearest,40.08,30.6,1,5,375.0,750.0,
 2026-11-25 11:55,NIFTY,Nifty 50,RSI,PE,25950,2026-12-01,25921.75,67.8,3,195,20.0,40.0,240.0
 2026-11-25 11:50,SILVERM,Silver Mini,VWAP,PE,,nearest,40.2,,1,5,275.0,825.0,
+2026-11-25 18:00,CRUDEOIL,Crude Oil,RSI,PE,,nearest,82.32,68.2,1,100,21.0,42.0,
